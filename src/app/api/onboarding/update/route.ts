@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
+import { getCurrentUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error";
+}
+
 export async function POST(req: Request) {
   try {
-    const { userId, habits, syncTimes, notifications, onboardingComplete } = await req.json();
+    const { habits, syncTimes, notifications, onboardingComplete } = await req.json();
+    const currentUser = await getCurrentUser();
 
-    if (!userId) {
-      return NextResponse.json({ error: "Missing userId" }, { status: 400 });
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const client = await clientPromise;
@@ -18,13 +24,13 @@ export async function POST(req: Request) {
     // Convert string ID to ObjectId
     let oId: ObjectId;
     try {
-      oId = new ObjectId(userId);
-    } catch (err) {
-      return NextResponse.json({ error: "Invalid userId format" }, { status: 400 });
+      oId = new ObjectId(currentUser.userId);
+    } catch {
+      return NextResponse.json({ error: "Invalid session user" }, { status: 400 });
     }
 
     // Prepare update payload
-    const updateDoc: any = {};
+    const updateDoc: Record<string, unknown> = {};
     if (habits !== undefined) updateDoc.habits = habits;
     if (syncTimes !== undefined) updateDoc.syncTimes = syncTimes;
     if (notifications !== undefined) updateDoc.notifications = notifications;
@@ -43,10 +49,10 @@ export async function POST(req: Request) {
       message: "Profile updated successfully",
       updated: true
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in onboarding update API:", error);
     return NextResponse.json(
-      { error: "Internal Server Error", details: error.message },
+      { error: "Internal Server Error", details: getErrorMessage(error) },
       { status: 500 }
     );
   }

@@ -1,30 +1,33 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
-import crypto from "crypto";
+import { createSession, hashPassword, toSafeUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
-// Secure native PBKDF2 password hashing helper
-function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
-  return `${salt}:${hash}`;
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Unknown error";
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { name, email, password, assessment } = body;
+    const normalizedName = typeof name === "string" ? name.trim() : "";
+    const normalizedEmail = typeof email === "string" ? email.trim().toLowerCase() : "";
 
-    if (!name || !email || !password) {
+    if (!normalizedName || !normalizedEmail || typeof password !== "string") {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    if (password.length < 8) {
+      return NextResponse.json({ error: "Password must be at least 8 characters" }, { status: 400 });
     }
 
     const client = await clientPromise;
     const db = client.db("calmpulse");
 
     // Check if user already exists
-    const existingUser = await db.collection("users").findOne({ email: email.toLowerCase() });
+    const existingUser = await db.collection("users").findOne({ email: normalizedEmail });
     if (existingUser) {
       return NextResponse.json({ error: "Email is already registered" }, { status: 409 });
     }
@@ -33,8 +36,8 @@ export async function POST(req: Request) {
 
     // Create user document
     const userDoc = {
-      name,
-      email: email.toLowerCase(),
+      name: normalizedName,
+      email: normalizedEmail,
       passwordHash,
       createdAt: new Date(),
       focusArea: assessment?.focusArea || null,
@@ -48,16 +51,25 @@ export async function POST(req: Request) {
     };
 
     const result = await db.collection("users").insertOne(userDoc);
+    const user = {
+      ...userDoc,
+      _id: result.insertedId
+    };
+
+    await createSession({
+      userId: result.insertedId.toString(),
+      email: userDoc.email,
+      name: userDoc.name
+    });
 
     return NextResponse.json({
       message: "Account created successfully",
-      userId: result.insertedId.toString(),
-      name
+      user: toSafeUser(user)
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in signup API:", error);
     return NextResponse.json(
-      { error: "Internal Server Error", details: error.message },
+      { error: "Internal Server Error", details: getErrorMessage(error) },
       { status: 500 }
     );
   }

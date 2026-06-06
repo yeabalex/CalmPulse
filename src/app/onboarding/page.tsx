@@ -9,6 +9,52 @@ import PodSyncScheduling from "@/components/onboarding/PodSyncScheduling";
 import ReminderConfig from "@/components/onboarding/ReminderConfig";
 import OnboardingComplete from "@/components/onboarding/OnboardingComplete";
 
+interface PacingHabit {
+  id: string;
+  name: string;
+  type: string;
+  value: string;
+  enabled: boolean;
+}
+
+interface AssessmentData {
+  focusArea?: string;
+  ventText?: string;
+  answers?: Record<string, string>;
+  report?: unknown;
+}
+
+interface AuthProfile {
+  userId: string;
+  habits?: PacingHabit[];
+  syncTimes?: { morning: string; evening: string };
+  notifications?: Record<string, boolean>;
+  onboardingComplete?: boolean;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "An unexpected error occurred.";
+}
+
+function getSavedAssessment() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const saved = localStorage.getItem("calmpulse_assessment");
+
+  if (!saved) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(saved) as AssessmentData;
+  } catch (error) {
+    console.error("Failed to parse saved assessment", error);
+    return null;
+  }
+}
+
 function OnboardingContent() {
   const searchParams = useSearchParams();
   const cohortIdRaw = searchParams.get("cohortId");
@@ -16,31 +62,44 @@ function OnboardingContent() {
 
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState("");
-  const [habits, setHabits] = useState<any[]>([]);
+  const [habits, setHabits] = useState<PacingHabit[]>([]);
   const [syncTimes, setSyncTimes] = useState({ morning: "09:00", evening: "21:00" });
-  const [notifications, setNotifications] = useState<Record<string, boolean>>({});
-  const [assessment, setAssessment] = useState<any>(null);
+  const [assessment] = useState<AssessmentData | null>(() => getSavedAssessment());
 
+  const [authChecking, setAuthChecking] = useState(true);
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupError, setSignupError] = useState("");
 
   const steps = ["Account Creation", "Pacing Reminders", "Pod Sync Time", "Notifications", "Ready Dashboard"];
 
-  // Read assessment data from localStorage on mount
+  // Read existing session on mount
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("calmpulse_assessment");
-      if (saved) {
-        try {
-          setAssessment(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse saved assessment", e);
+    const loadCurrentUser = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+
+        if (!response.ok) {
+          return;
         }
+
+        const data = await response.json();
+        const user = data.user as AuthProfile;
+
+        setUserId(user.userId);
+        setHabits(Array.isArray(user.habits) ? user.habits : []);
+        setSyncTimes(user.syncTimes || { morning: "09:00", evening: "21:00" });
+        setStep(user.onboardingComplete ? 5 : 2);
+      } catch (err) {
+        console.error("Failed to load current user:", err);
+      } finally {
+        setAuthChecking(false);
       }
-    }
+    };
+
+    loadCurrentUser();
   }, []);
 
-  const handleAccountSubmit = async (credentials: any) => {
+  const handleAccountSubmit = async (credentials: { name: string; email: string; password: string }) => {
     setSignupLoading(true);
     setSignupError("");
 
@@ -60,17 +119,17 @@ function OnboardingContent() {
         throw new Error(data.error || "Failed to create account");
       }
 
-      setUserId(data.userId);
+      setUserId(data.user.userId);
       setStep(2);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setSignupError(err.message || "An unexpected error occurred during signup.");
+      setSignupError(getErrorMessage(err));
     } finally {
       setSignupLoading(false);
     }
   };
 
-  const handleHabitSubmit = async (configuredHabits: any[]) => {
+  const handleHabitSubmit = async (configuredHabits: PacingHabit[]) => {
     setHabits(configuredHabits);
     
     // Sync with MongoDB
@@ -79,7 +138,7 @@ function OnboardingContent() {
         await fetch("/api/onboarding/update", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, habits: configuredHabits }),
+          body: JSON.stringify({ habits: configuredHabits }),
         });
       } catch (err) {
         console.error("Failed to sync habits with DB:", err);
@@ -98,7 +157,7 @@ function OnboardingContent() {
         await fetch("/api/onboarding/update", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userId, syncTimes: times }),
+          body: JSON.stringify({ syncTimes: times }),
         });
       } catch (err) {
         console.error("Failed to sync syncTimes with DB:", err);
@@ -109,8 +168,6 @@ function OnboardingContent() {
   };
 
   const handleReminderSubmit = async (reminderSettings: Record<string, boolean>) => {
-    setNotifications(reminderSettings);
-
     // Sync with MongoDB & mark onboarding complete
     if (userId) {
       try {
@@ -118,7 +175,6 @@ function OnboardingContent() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            userId,
             notifications: reminderSettings,
             onboardingComplete: true
           }),
@@ -139,6 +195,14 @@ function OnboardingContent() {
       {/* Onboarding Main Content */}
       <main className="flex-1 w-full max-w-5xl mx-auto px-6 pt-28 pb-16 flex items-center justify-center">
         <div className="w-full">
+          {authChecking && (
+            <div className="min-h-[260px] flex items-center justify-center text-xs font-semibold text-slate-500">
+              Checking your session...
+            </div>
+          )}
+
+          {!authChecking && (
+            <>
           {step === 1 && (
             <AccountCreation
               onSubmit={handleAccountSubmit}
@@ -172,6 +236,8 @@ function OnboardingContent() {
               habits={habits}
               syncTimes={syncTimes}
             />
+          )}
+            </>
           )}
         </div>
       </main>
