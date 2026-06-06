@@ -33,6 +33,12 @@ export default function Navbar() {
 
       <div>
         <Link
+          href="/login"
+          className="hidden md:inline-flex mr-3 text-xs md:text-sm font-semibold text-slate-650 hover:text-slate-950 transition-colors"
+        >
+          Log in
+        </Link>
+        <Link
           href="/intake"
           className="group relative inline-flex items-center justify-center p-0.5 overflow-hidden text-xs md:text-sm font-semibold text-slate-900 rounded-full bg-slate-200 hover:bg-slate-300 transition-all duration-300"
         >
