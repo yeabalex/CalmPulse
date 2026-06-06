@@ -6,8 +6,12 @@ import HowItWorks from "@/components/HowItWorks";
 import PacingPlans from "@/components/PacingPlans";
 import IntakePreview from "@/components/IntakePreview";
 import Footer from "@/components/Footer";
+import { useAuth } from "@/lib/useAuth";
 
 export default function Home() {
+  // Redirect logged-in users directly to dashboard
+  useAuth({ redirectTo: "/dashboard", redirectIfFound: true });
+
   return (
     <div className="min-h-screen flex flex-col font-sans bg-white text-slate-900 selection:bg-slate-900/10 selection:text-slate-900">
       {/* Header/Navbar */}

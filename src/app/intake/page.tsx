@@ -7,8 +7,12 @@ import VoiceTextVent from "@/components/intake/VoiceTextVent";
 import ClarifyingQuestions from "@/components/intake/ClarifyingQuestions";
 import DiagnosticReport, { DiagnosticReportData } from "@/components/intake/DiagnosticReport";
 import { Loader2 } from "lucide-react";
+import { useAuth } from "@/lib/useAuth";
 
 export default function IntakePage() {
+  // Redirect logged-in users directly to dashboard
+  useAuth({ redirectTo: "/dashboard", redirectIfFound: true });
+
   const [step, setStep] = useState(1);
   const [focusArea, setFocusArea] = useState("");
   const [ventText, setVentText] = useState("");

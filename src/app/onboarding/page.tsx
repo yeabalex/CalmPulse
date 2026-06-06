@@ -8,14 +8,20 @@ import PacingPlanSetup from "@/components/onboarding/PacingPlanSetup";
 import PodSyncScheduling from "@/components/onboarding/PodSyncScheduling";
 import ReminderConfig from "@/components/onboarding/ReminderConfig";
 import OnboardingComplete from "@/components/onboarding/OnboardingComplete";
+import GoalSelection from "@/components/onboarding/GoalSelection";
+import { useAuth } from "@/lib/useAuth";
 
 function OnboardingContent() {
+  // Redirect logged-in users who finished onboarding to dashboard
+  useAuth({ redirectTo: "/dashboard", redirectIfFound: true });
+
   const searchParams = useSearchParams();
   const cohortIdRaw = searchParams.get("cohortId");
   const cohortId = cohortIdRaw ? parseInt(cohortIdRaw, 10) : 42;
 
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState("");
+  const [goal, setGoal] = useState<any>(null);
   const [habits, setHabits] = useState<any[]>([]);
   const [syncTimes, setSyncTimes] = useState({ morning: "09:00", evening: "21:00" });
   const [notifications, setNotifications] = useState<Record<string, boolean>>({});
@@ -24,7 +30,7 @@ function OnboardingContent() {
   const [signupLoading, setSignupLoading] = useState(false);
   const [signupError, setSignupError] = useState("");
 
-  const steps = ["Account Creation", "Pacing Reminders", "Pod Sync Time", "Notifications", "Ready Dashboard"];
+  const steps = ["Account Creation", "Goal Selection", "Pacing Reminders", "Pod Sync Time", "Notifications", "Ready Dashboard"];
 
   // Read assessment data from localStorage on mount
   useEffect(() => {
@@ -70,6 +76,27 @@ function OnboardingContent() {
     }
   };
 
+  const handleGoalSubmit = async (selectedGoal: any) => {
+    setGoal(selectedGoal);
+
+    if (userId) {
+      try {
+        await fetch("/api/onboarding/update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId,
+            goal: selectedGoal.title,
+            goalDuration: selectedGoal.duration
+          }),
+        });
+      } catch (err) {
+        console.error("Failed to save goal with DB:", err);
+      }
+    }
+    setStep(3);
+  };
+
   const handleHabitSubmit = async (configuredHabits: any[]) => {
     setHabits(configuredHabits);
     
@@ -86,7 +113,7 @@ function OnboardingContent() {
       }
     }
     
-    setStep(3);
+    setStep(4);
   };
 
   const handleSyncSubmit = async (times: { morning: string; evening: string }) => {
@@ -105,7 +132,7 @@ function OnboardingContent() {
       }
     }
 
-    setStep(4);
+    setStep(5);
   };
 
   const handleReminderSubmit = async (reminderSettings: Record<string, boolean>) => {
@@ -128,7 +155,7 @@ function OnboardingContent() {
       }
     }
 
-    setStep(5);
+    setStep(6);
   };
 
   return (
@@ -148,25 +175,34 @@ function OnboardingContent() {
           )}
 
           {step === 2 && (
-            <PacingPlanSetup onSubmit={handleHabitSubmit} />
+            <GoalSelection
+              onSubmit={handleGoalSubmit}
+              onBack={() => setStep(1)}
+            />
           )}
 
           {step === 3 && (
-            <PodSyncScheduling
-              cohortId={cohortId}
-              onSubmit={handleSyncSubmit}
-              onBack={() => setStep(2)}
+            <PacingPlanSetup
+              onSubmit={handleHabitSubmit}
             />
           )}
 
           {step === 4 && (
-            <ReminderConfig
-              onSubmit={handleReminderSubmit}
+            <PodSyncScheduling
+              cohortId={cohortId}
+              onSubmit={handleSyncSubmit}
               onBack={() => setStep(3)}
             />
           )}
 
           {step === 5 && (
+            <ReminderConfig
+              onSubmit={handleReminderSubmit}
+              onBack={() => setStep(4)}
+            />
+          )}
+
+          {step === 6 && (
             <OnboardingComplete
               cohortId={cohortId}
               habits={habits}

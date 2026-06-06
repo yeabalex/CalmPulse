@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 import crypto from "crypto";
+import { cookies } from "next/headers";
 
 export const runtime = "nodejs";
 
@@ -48,10 +49,21 @@ export async function POST(req: Request) {
     };
 
     const result = await db.collection("users").insertOne(userDoc);
+    const userIdStr = result.insertedId.toString();
+
+    // Set HTTP-only cookie to log user in instantly
+    const cookieStore = await cookies();
+    cookieStore.set("calmpulse_session", userIdStr, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7, // 1 week
+      path: "/",
+      sameSite: "lax"
+    });
 
     return NextResponse.json({
       message: "Account created successfully",
-      userId: result.insertedId.toString(),
+      userId: userIdStr,
       name
     });
   } catch (error: any) {
