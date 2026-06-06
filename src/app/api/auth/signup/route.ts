@@ -1,16 +1,8 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
-import crypto from "crypto";
-import { cookies } from "next/headers";
+import { getCalmPulseDb } from "@/lib/mongodb";
+import { createSession, hashPassword } from "@/lib/auth";
 
 export const runtime = "nodejs";
-
-// Secure native PBKDF2 password hashing helper
-function hashPassword(password: string): string {
-  const salt = crypto.randomBytes(16).toString("hex");
-  const hash = crypto.pbkdf2Sync(password, salt, 1000, 64, "sha512").toString("hex");
-  return `${salt}:${hash}`;
-}
 
 export async function POST(req: Request) {
   try {
@@ -21,8 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("calmpulse");
+    const db = await getCalmPulseDb();
 
     // Check if user already exists
     const existingUser = await db.collection("users").findOne({ email: email.toLowerCase() });
@@ -40,8 +31,10 @@ export async function POST(req: Request) {
       createdAt: new Date(),
       focusArea: assessment?.focusArea || null,
       ventText: assessment?.ventText || null,
-      clarifyingAnswers: assessment?.answers || null,
-      calculatedReport: assessment?.report || null,
+      clarifyingQuestions: assessment?.clarifyingQuestions || assessment?.questions || null,
+      clarifyingAnswers: assessment?.clarifyingAnswers || assessment?.answers || null,
+      calculatedReport: assessment?.initialBaseline || assessment?.report || null,
+      initialBaseline: assessment?.initialBaseline || assessment?.report || null,
       habits: [],
       syncTimes: { morning: "09:00", evening: "21:00" },
       notifications: { s1: true, s2: true, s3: false },
@@ -51,15 +44,7 @@ export async function POST(req: Request) {
     const result = await db.collection("users").insertOne(userDoc);
     const userIdStr = result.insertedId.toString();
 
-    // Set HTTP-only cookie to log user in instantly
-    const cookieStore = await cookies();
-    cookieStore.set("calmpulse_session", userIdStr, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 7, // 1 week
-      path: "/",
-      sameSite: "lax"
-    });
+    await createSession({ userId: userIdStr, email: userDoc.email, name });
 
     return NextResponse.json({
       message: "Account created successfully",

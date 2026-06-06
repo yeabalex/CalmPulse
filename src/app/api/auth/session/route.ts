@@ -1,28 +1,18 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
-import { cookies } from "next/headers";
+import { getCurrentUserObjectId } from "@/lib/auth";
+import { getCalmPulseDb } from "@/lib/mongodb";
 
 export const runtime = "nodejs";
 
 export async function GET() {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("calmpulse_session");
+    const userId = await getCurrentUserObjectId();
 
-    if (!sessionCookie || !sessionCookie.value) {
+    if (!userId) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("calmpulse");
-
-    let userId: ObjectId;
-    try {
-      userId = new ObjectId(sessionCookie.value);
-    } catch {
-      return NextResponse.json({ authenticated: false }, { status: 401 });
-    }
+    const db = await getCalmPulseDb();
 
     const user = await db.collection("users").findOne(
       { _id: userId },

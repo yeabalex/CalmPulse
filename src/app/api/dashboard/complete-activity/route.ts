@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
-import { ObjectId } from "mongodb";
-import { cookies } from "next/headers";
+import { getCurrentUserObjectId } from "@/lib/auth";
+import { getCalmPulseDb } from "@/lib/mongodb";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("calmpulse_session");
+    const userId = await getCurrentUserObjectId();
 
-    if (!sessionCookie || !sessionCookie.value) {
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -20,15 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing activityId" }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("calmpulse");
-
-    let userId: ObjectId;
-    try {
-      userId = new ObjectId(sessionCookie.value);
-    } catch {
-      return NextResponse.json({ error: "Invalid session" }, { status: 401 });
-    }
+    const db = await getCalmPulseDb();
 
     const updateQuery = completed
       ? { $addToSet: { completedActivities: activityId } }

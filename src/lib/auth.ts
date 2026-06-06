@@ -4,7 +4,7 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { ObjectId, type Document } from "mongodb";
-import clientPromise from "@/lib/mongodb";
+import { getCalmPulseDb } from "@/lib/mongodb";
 
 const SESSION_COOKIE_NAME = "calmpulse_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
@@ -45,6 +45,17 @@ function getJwtSecret() {
 
 function getEncodedJwtSecret() {
   return new TextEncoder().encode(getJwtSecret());
+}
+
+function shouldUseSecureSessionCookie() {
+  const explicit = process.env.SESSION_COOKIE_SECURE;
+
+  if (explicit) {
+    return explicit.toLowerCase() === "true";
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
+  return Boolean(appUrl?.startsWith("https://"));
 }
 
 export function hashPassword(password: string) {
@@ -121,7 +132,7 @@ export async function createSession(user: { userId: string; email: string; name:
     value: token,
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: shouldUseSecureSessionCookie(),
     path: "/",
     expires: expiresAt,
     maxAge: SESSION_TTL_SECONDS,
@@ -151,6 +162,30 @@ export async function getSessionPayload() {
     }
 
     return payload as SessionPayload;
+  } catch {
+    try {
+      const legacyUserId = new ObjectId(token).toString();
+      return {
+        userId: legacyUserId,
+        email: "",
+        name: "",
+        sub: legacyUserId,
+      } satisfies SessionPayload;
+    } catch {
+      return null;
+    }
+  }
+}
+
+export async function getCurrentUserObjectId() {
+  const session = await getSessionPayload();
+
+  if (!session?.userId) {
+    return null;
+  }
+
+  try {
+    return new ObjectId(session.userId);
   } catch {
     return null;
   }
@@ -189,8 +224,7 @@ export async function getCurrentUser() {
     return null;
   }
 
-  const client = await clientPromise;
-  const db = client.db("calmpulse");
+  const db = await getCalmPulseDb();
   const user = await db.collection("users").findOne({ _id: userObjectId });
 
   return user ? toSafeUser(user) : null;

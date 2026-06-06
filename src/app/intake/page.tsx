@@ -25,6 +25,28 @@ export default function IntakePage() {
 
   const steps = ["Focus Area", "Expressive Vent", "Clarifications", "Pacing Baseline"];
 
+  const saveAssessment = (
+    baselineReport: DiagnosticReportData,
+    formAnswers: Record<string, string>
+  ) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    localStorage.setItem(
+      "calmpulse_assessment",
+      JSON.stringify({
+        focusArea,
+        ventText,
+        clarifyingQuestions: questions,
+        clarifyingAnswers: formAnswers,
+        answers: formAnswers,
+        initialBaseline: baselineReport,
+        report: baselineReport,
+      })
+    );
+  };
+
   const handleSubtypeSelect = (subtype: string) => {
     setFocusArea(subtype);
     setStep(2);
@@ -85,22 +107,13 @@ export default function IntakePage() {
 
       const data = await response.json();
       setReport(data.report);
-
-      // Save assessment details in localStorage for Account Creation onboarding step
-      if (typeof window !== "undefined") {
-        localStorage.setItem("calmpulse_assessment", JSON.stringify({
-          focusArea,
-          ventText,
-          answers: formAnswers,
-          report: data.report
-        }));
-      }
+      saveAssessment(data.report, formAnswers);
 
       setStep(4);
     } catch (err) {
       console.error(err);
       // Fallback report
-      setReport({
+      const fallbackReport = {
         anxietyScore: 7.2,
         subtype: focusArea,
         symptoms: ["Autonomic Spikes", "Muscle Tension", "Cognitive Exhaustion"],
@@ -111,7 +124,9 @@ export default function IntakePage() {
         ],
         cohortId: 42,
         cohortDescription: "Cohorts of phase-matched peers working on social grounding boundaries."
-      });
+      };
+      setReport(fallbackReport);
+      saveAssessment(fallbackReport, formAnswers);
       setStep(4);
     } finally {
       setLoading(false);

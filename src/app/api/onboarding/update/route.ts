@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import clientPromise from "@/lib/mongodb";
+import { getCalmPulseDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
@@ -125,8 +125,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing userId" }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("calmpulse");
+    const db = await getCalmPulseDb();
 
     // Convert string ID to ObjectId
     let oId: ObjectId;
