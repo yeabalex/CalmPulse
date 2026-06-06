@@ -24,8 +24,8 @@ export default function AccountCreation({ onSubmit, loading, error }: AccountCre
       return;
     }
 
-    if (password.length < 6) {
-      setFormError("Password must be at least 6 characters.");
+    if (password.length < 8) {
+      setFormError("Password must be at least 8 characters.");
       return;
     }
 
@@ -104,7 +104,7 @@ export default function AccountCreation({ onSubmit, loading, error }: AccountCre
         <div className="flex items-start gap-2.5 text-[10px] text-slate-500 bg-slate-50 border border-slate-200 p-3.5 rounded-xl">
           <Shield className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
           <span className="leading-relaxed">
-            Your email and password are fully encrypted. To protect your identity, only your nickname is visible to other members of your peer pod.
+            Your password is stored as a salted hash. To protect your identity, only your nickname is visible to other members of your peer pod.
           </span>
         </div>
 
