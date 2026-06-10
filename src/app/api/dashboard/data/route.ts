@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserObjectId } from "@/lib/auth";
 import { getCalmPulseDb } from "@/lib/mongodb";
+import { applyRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
-export async function GET() {
+export async function GET(req: Request) {
+  const limited = applyRateLimit(req, {
+    keyPrefix: "dashboard:data",
+    limit: 600,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (limited) return limited;
+
   try {
     const userId = await getCurrentUserObjectId();
 

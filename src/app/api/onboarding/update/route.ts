@@ -3,6 +3,7 @@ import { getCalmPulseDb } from "@/lib/mongodb";
 import { ObjectId } from "mongodb";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
+import { applyRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -118,6 +119,14 @@ Return ONLY a JSON array containing the activities. Do not include markdown code
 }
 
 export async function POST(req: Request) {
+  const limited = applyRateLimit(req, {
+    keyPrefix: "onboarding:update",
+    limit: 240,
+    windowMs: 60 * 60 * 1000,
+    maxBodyBytes: 80 * 1024,
+  });
+  if (limited) return limited;
+
   try {
     const { userId, habits, syncTimes, notifications, onboardingComplete, goal, goalDuration } = await req.json();
 

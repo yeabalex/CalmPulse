@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { getCalmPulseDb } from "@/lib/mongodb";
 import { createSession, hashPassword, verifyPassword } from "@/lib/auth";
+import { applyRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const limited = applyRateLimit(req, {
+    keyPrefix: "auth:login",
+    limit: 60,
+    windowMs: 15 * 60 * 1000,
+    maxBodyBytes: 10 * 1024,
+  });
+  if (limited) return limited;
+
   try {
     const { email, password } = await req.json();
 

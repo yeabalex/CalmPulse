@@ -1,6 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
+import { applyRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -60,6 +61,14 @@ const DEFAULT_REPORT = {
 };
 
 export async function POST(req: Request) {
+  const limited = applyRateLimit(req, {
+    keyPrefix: "ai:baseline",
+    limit: 120,
+    windowMs: 60 * 60 * 1000,
+    maxBodyBytes: 80 * 1024,
+  });
+  if (limited) return limited;
+
   try {
     const { focusArea, ventText, answers } = await req.json();
 

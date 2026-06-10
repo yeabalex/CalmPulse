@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserObjectId } from "@/lib/auth";
 import { getCalmPulseDb } from "@/lib/mongodb";
+import { applyRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const limited = applyRateLimit(req, {
+    keyPrefix: "dashboard:complete-activity",
+    limit: 480,
+    windowMs: 60 * 60 * 1000,
+    maxBodyBytes: 10 * 1024,
+  });
+  if (limited) return limited;
+
   try {
     const userId = await getCurrentUserObjectId();
 

@@ -3,10 +3,19 @@ import { getCurrentUserObjectId } from "@/lib/auth";
 import { getCalmPulseDb } from "@/lib/mongodb";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
+import { applyRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const limited = applyRateLimit(req, {
+    keyPrefix: "ai:reflection-submit",
+    limit: 120,
+    windowMs: 60 * 60 * 1000,
+    maxBodyBytes: 80 * 1024,
+  });
+  if (limited) return limited;
+
   try {
     const userId = await getCurrentUserObjectId();
 

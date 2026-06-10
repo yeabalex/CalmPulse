@@ -3,6 +3,7 @@ import { getCurrentUserObjectId } from "@/lib/auth";
 import { getCalmPulseDb } from "@/lib/mongodb";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
+import { applyRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,14 @@ const DEFAULT_QUESTIONS = [
   "Did you experience any sudden peaks of arousal or stress today? If so, how did you respond somatic-wise?"
 ];
 
-export async function GET() {
+export async function GET(req: Request) {
+  const limited = applyRateLimit(req, {
+    keyPrefix: "ai:reflection-questions",
+    limit: 120,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (limited) return limited;
+
   try {
     const userId = await getCurrentUserObjectId();
 

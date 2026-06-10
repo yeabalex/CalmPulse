@@ -1,10 +1,19 @@
 import { NextResponse } from "next/server";
 import { getCalmPulseDb } from "@/lib/mongodb";
 import { createSession, hashPassword } from "@/lib/auth";
+import { applyRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
+  const limited = applyRateLimit(req, {
+    keyPrefix: "auth:signup",
+    limit: 30,
+    windowMs: 60 * 60 * 1000,
+    maxBodyBytes: 80 * 1024,
+  });
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const { name, email, password, assessment } = body;
