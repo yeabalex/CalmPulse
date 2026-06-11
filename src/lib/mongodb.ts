@@ -14,12 +14,6 @@ function resolveMongoUri(): string {
     return uri;
   }
 
-  if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "MONGODB_URI is required in production. Add your MongoDB Atlas connection string to the environment."
-    );
-  }
-
   return DEFAULT_LOCAL_URI;
 }
 
@@ -156,6 +150,11 @@ clientPromise
   });
 
 export async function getCalmPulseDb(): Promise<Db> {
+  if (process.env.NODE_ENV === "production" && !process.env.MONGODB_URI) {
+    throw new Error(
+      "MONGODB_URI environment variable is missing in production. Please check your configuration."
+    );
+  }
   const connectedClient = await clientPromise;
   return connectedClient.db(databaseName);
 }
