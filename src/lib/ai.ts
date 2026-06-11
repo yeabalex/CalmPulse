@@ -1,3 +1,5 @@
+export const GROQ_COMPANION_MODEL = "openai/gpt-oss-120b";
+
 export function getGroqApiKey(): string | undefined {
   const keysStr = process.env.GROQ_API_KEY;
   if (!keysStr) return undefined;

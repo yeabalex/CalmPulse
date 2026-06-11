@@ -1,7 +1,7 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import type { Db, ObjectId } from "mongodb";
-import { getGroqApiKey } from "@/lib/ai";
+import { getGroqApiKey, GROQ_COMPANION_MODEL } from "@/lib/ai";
 
 const RAW_MESSAGE_LIMIT = 20;
 const DURABLE_MEMORY_LIMIT = 40;
@@ -289,7 +289,7 @@ async function summarizeConversationOverflow(
       });
 
       const response = await generateText({
-        model: groq("llama-3.3-70b-versatile"),
+        model: groq(GROQ_COMPANION_MODEL),
         prompt: `Update the rolling conversation state for a mental wellness pacing companion.
 
 Existing rolling state:
@@ -444,6 +444,38 @@ function isExtractedMemoryItem(value: unknown): value is ExtractedMemoryItem {
   return typeof value === "object" && value !== null;
 }
 
+function normalizeMemoryText(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function memoryTokens(text: string): Set<string> {
+  return new Set(normalizeMemoryText(text).split(" ").filter((token) => token.length > 2));
+}
+
+function isDuplicateMemory(candidate: string, existing: string): boolean {
+  const normalizedCandidate = normalizeMemoryText(candidate);
+  const normalizedExisting = normalizeMemoryText(existing);
+
+  if (!normalizedCandidate || !normalizedExisting) return false;
+  if (normalizedCandidate === normalizedExisting) return true;
+
+  const candidateWords = normalizedCandidate.split(" ");
+  if (candidateWords.length > 1 && normalizedExisting.includes(normalizedCandidate)) return true;
+  if (candidateWords.length > 3 && normalizedCandidate.includes(normalizedExisting)) return true;
+
+  const candidateTokens = memoryTokens(candidate);
+  const existingTokens = memoryTokens(existing);
+  if (candidateTokens.size < 2 || existingTokens.size < 2) return false;
+
+  const sharedCount = Array.from(candidateTokens).filter((token) => existingTokens.has(token)).length;
+  const overlap = sharedCount / Math.min(candidateTokens.size, existingTokens.size);
+  return overlap >= 0.8;
+}
+
 async function compactDurableMemories(db: Db, userId: string, apiKey: string): Promise<void> {
   const memories = await db
     .collection<DurableMemoryDoc>(DURABLE_COLLECTION)
@@ -462,7 +494,7 @@ async function compactDurableMemories(db: Db, userId: string, apiKey: string): P
     });
 
     const response = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: groq(GROQ_COMPANION_MODEL),
       prompt: `Summarize these durable user memories into one compact memory under 80 words.
 Keep only stable preferences, triggers, constraints, and coping strategies. Do not invent facts.
 
@@ -509,7 +541,7 @@ export async function extractDurableMemoriesAfterChat(
     });
 
     const response = await generateText({
-      model: groq("llama-3.3-70b-versatile"),
+      model: groq(GROQ_COMPANION_MODEL),
       prompt: `Extract durable memories from this CalmPulse companion exchange.
 
 Existing durable memories:
@@ -547,11 +579,20 @@ Only save stable, useful personalization facts. Return [] for one-off moods, gen
       .find({ userId })
       .project({ text: 1 })
       .toArray();
-    const existingTexts = new Set(existing.map((memory) => memory.text.toLowerCase()));
+    const existingTexts = existing
+      .map((memory) => cleanText(memory.text, ""))
+      .filter(Boolean);
     const now = new Date();
+    const pendingTexts: string[] = [];
 
     const docs = extracted
-      .filter((item) => !existingTexts.has(item.text.toLowerCase()))
+      .filter((item) => {
+        const duplicate =
+          existingTexts.some((text) => isDuplicateMemory(item.text, text)) ||
+          pendingTexts.some((text) => isDuplicateMemory(item.text, text));
+        if (!duplicate) pendingTexts.push(item.text);
+        return !duplicate;
+      })
       .map((item) => ({
         userId,
         text: item.text,

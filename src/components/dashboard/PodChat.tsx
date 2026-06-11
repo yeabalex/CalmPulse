@@ -24,11 +24,15 @@ const INITIAL_DEMO_MESSAGES: ChatMessage[] = [
     id: "msg_1",
     userId: "companion",
     userName: "AI Companion",
-    text: "Hello! I am your AI Pacing Companion. I monitor your daily pacing indicators and can help guide you through anxiety triggers or schedule adjustments. How are you feeling today?",
+    text: "Hello, I'm here with you. What feels most important to talk through right now?",
     createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
     isOwn: false
   }
 ];
+
+function containsGreeting(text: string) {
+  return /\b(hello|hi|hey)\b/i.test(text);
+}
 
 export default function CompanionChat({ completedCount, totalCount, anxietyScore }: CompanionChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -106,25 +110,24 @@ export default function CompanionChat({ completedCount, totalCount, anxietyScore
 
         const lowerText = userMessage.text.toLowerCase();
 
-        if (lowerText.includes("hello") || lowerText.includes("hi") || lowerText.includes("hey")) {
-          botResponse = `Hello! I'm here. Looking at your records today, you have completed ${completedCount} of your ${totalCount} daily pacing plan habits, and your current stress baseline is at ${anxietyScore.toFixed(1)}/10. What is on your mind?`;
+        if (containsGreeting(userMessage.text)) {
+          botResponse = "Hello, I'm here with you. What feels most important to talk through right now?";
         } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
-          botResponse = `I hear you. If you are experiencing somatic spikes, I highly recommend clicking the red SOS button in the bottom right corner to start immediate breathing guidance. Or we can practice a 4-7-8 breathing pause right here.`;
+          botResponse = "I hear you. Try one slow 4-7-8 breathing cycle with me now, and if this feels urgent or unsafe, use local emergency support or the SOS button for immediate grounding.";
         } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
           if (completedCount === 0) {
-            botResponse = `You haven't completed any pacing habits today yet. I recommend starting with the "Somatic Grounding Pause" (5m breathing break) on your checklist to help lower your ${anxietyScore.toFixed(1)} stress score.`;
+            botResponse = `Start with one small reset: the "Somatic Grounding Pause" on your checklist is a good first step. Keep it simple and do just that before deciding on the next task.`;
           } else if (completedCount < totalCount) {
-            botResponse = `You've checked off ${completedCount} pacing habits so far. Great effort! Try completing the remaining activities to satisfy today's pacing target.`;
+            botResponse = `You've completed ${completedCount} of ${totalCount} pacing habits today. Pick the easiest remaining one next so the plan keeps moving without adding pressure.`;
           } else {
-            botResponse = `Excellent work! You have completed all ${totalCount} pacing habits for today. Your stress baseline has been successfully decelerated.`;
+            botResponse = `You've completed all ${totalCount} pacing habits today. Let the rest of the day be maintenance: lower stimulation, keep transitions gentle, and avoid adding extra obligations.`;
           }
         } else {
-          // Standard conversational responses incorporating user stats
           const answers = [
-            `Pacing is all about small, steady adjustments. Since your stress score is currently ${anxietyScore.toFixed(1)}, let's focus on setting tight boundaries on your digital notifications this evening.`,
-            `I notice you have checked off ${completedCount}/${totalCount} habits today. How are you feeling physically? Are you experiencing any shoulder tension or chest tightness?`,
-            `That is helpful context. Remember, the goal isn't productivity—it's bio-regulatory stability. Take a step back and engage in a somatic pause if you need to.`,
-            `I am keeping track of your logs. Your historical data suggests you recover faster on days when you complete your pacing strolls. Let's try to do that today.`
+            "Let's keep this small and concrete. Name the one thing that feels heaviest right now, and we can turn it into the next manageable step.",
+            "That makes sense. Before solving all of it, try lowering the intensity for the next ten minutes: fewer inputs, slower transitions, and one clear priority.",
+            "You do not have to push through this all at once. Pick the next action that would make your body feel 5 percent safer or less overloaded.",
+            "Let's pause the analysis for a moment. Put both feet down, unclench your jaw, and tell me what changed even slightly."
           ];
           botResponse = answers[Math.floor(Math.random() * answers.length)];
         }
