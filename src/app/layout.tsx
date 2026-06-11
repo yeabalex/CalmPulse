@@ -15,8 +15,8 @@ const jakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "CalmPulse — AI-Adaptive Behavioral Pacing",
-  description: "A continuous, closed-loop feedback engine translating subjective daily emotional logs into objective, dynamically morphing habits and anonymous cohort groups.",
+  title: "CalmPulse — AI Stress & Pacing Companion",
+  description: "CalmPulse translates daily stress logs and venting journals into personalized daily habit plans with the help of a 1-on-1 AI pacing companion.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,

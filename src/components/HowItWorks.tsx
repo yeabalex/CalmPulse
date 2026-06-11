@@ -6,26 +6,26 @@ export default function HowItWorks() {
   const steps = [
     {
       step: "01",
-      title: "Venting & Chat Assessment",
-      desc: "Instead of clicking cold multiple-choice forms, simply write or voice-vent how you feel. Our AI companion parses natural language to analyze your current anxiety level.",
+      title: "Write How You Feel",
+      desc: "Instead of clicking cold multiple-choice surveys, just write or speak how your day went. Our AI companion reviews your text to understand your current stress level.",
       icon: MessageSquare,
     },
     {
       step: "02",
-      title: "Personalized Support Habits",
-      desc: "CalmPulse synthesizes a dynamic list of custom pacing adjustments (screen limits, cognitive pauses, breathing alerts) tailored to your exact emotional metrics.",
+      title: "Get Your Daily Pacing Plan",
+      desc: "CalmPulse gives you a customized checklist of healthy pacing habits (like screen boundaries, quick breathing breaks, or outdoor strolls) tailored to your needs.",
       icon: Compass,
     },
     {
       step: "03",
-      title: "AI Pacing Companion",
-      desc: "Receive real-time support from your 1-on-1 AI pacing companion. Get personalized advice on habits, trigger management, stress patterns, and somatic pauses.",
+      title: "1-on-1 AI Coaching",
+      desc: "Get real-time feedback and encouragement from your AI pacing companion. Ask questions about your habits, stress triggers, or daily schedule any time.",
       icon: Sparkles,
     },
     {
       step: "04",
-      title: "Continuous Recalibration",
-      desc: "Log daily reflections. As your emotional tracking logs improve or fluctuate, our feedback engine recalibrates your pace goals and updates your pacing baseline trends.",
+      title: "Recalibrate & Track Progress",
+      desc: "As you check off habits and write down reflections, the app updates your stress baseline, logs your journal entries, and tracks your mental wellness trends.",
       icon: Activity,
     },
   ];
@@ -37,7 +37,7 @@ export default function HowItWorks() {
           How It Works
         </h2>
         <p className="text-slate-650 text-sm max-w-lg mx-auto">
-          An AI-driven closed-loop workflow that continuously refines your pacing guidelines and assists your stress-resilience recovery.
+          A simple daily loop: write down how you feel, get your custom habit plan, chat with your AI pacing coach, and watch your stress baseline recalibrate.
         </p>
       </div>
 

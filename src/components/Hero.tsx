@@ -24,7 +24,7 @@ export default function Hero() {
         <div className="flex-1 text-center lg:text-left space-y-6 max-w-2xl">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/10 border border-slate-900/20 text-xs font-bold text-slate-900 backdrop-blur-sm">
             <Zap className="w-3.5 h-3.5 text-slate-900" />
-            AI-Adaptive Behavioral Pacing
+            AI-Powered Stress Companion
           </div>
           
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-slate-900 leading-[1.12]">
@@ -35,7 +35,7 @@ export default function Hero() {
           </h1>
           
           <p className="text-base md:text-lg text-slate-800 max-w-lg leading-relaxed mx-auto lg:mx-0 font-medium">
-            CalmPulse translates subjective emotional logs into objective, dynamically pacing habits. Discover specialized routines backed by anonymous, phase-matched peers.
+            CalmPulse turns your daily stress logs and venting into a personalized daily habit plan. Take control of your day with real-time advice from your 1-on-1 AI coach.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
@@ -82,8 +82,8 @@ export default function Hero() {
 
             <div className="flex items-center justify-between">
               <div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase block">Current Pacing Rate</span>
-                <span className="text-2xl font-black text-slate-900 mt-1 block">45% <span className="text-xs font-medium text-slate-600">Decelerated</span></span>
+                <span className="text-[10px] font-bold text-slate-500 uppercase block">Recommended Rest Pace</span>
+                <span className="text-2xl font-black text-slate-900 mt-1 block">45% <span className="text-xs font-medium text-slate-600">Slower Pace</span></span>
               </div>
               <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-900">
                 <Zap className="w-5 h-5 text-slate-800 fill-slate-900/10" />
@@ -112,7 +112,7 @@ export default function Hero() {
 
             <div className="flex items-center gap-2 text-[11px] text-slate-750 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
               <Shield className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Closed-loop tracking: autonomic regulation stable.</span>
+              <span>AI tracking active: your stress levels are dropping.</span>
             </div>
           </GlassCard>
 
