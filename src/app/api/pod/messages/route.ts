@@ -2,20 +2,15 @@ import { NextResponse } from "next/server";
 import { getCurrentUserObjectId } from "@/lib/auth";
 import { getCalmPulseDb } from "@/lib/mongodb";
 import { applyRateLimit } from "@/lib/rateLimit";
-import { canUserAccessPod, ensureUserPod, MIN_POD_SIZE } from "@/lib/pods";
+import { createOpenAI } from "@ai-sdk/openai";
+import { generateText } from "ai";
+import { getGroqApiKey } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
-function anonymizeName(name: string): string {
-  const trimmed = name.trim();
-  if (!trimmed) return "Anonymous";
-  const first = trimmed.split(/\s+/)[0];
-  return first.charAt(0).toUpperCase() + first.slice(1);
-}
-
 export async function GET(req: Request) {
   const limited = applyRateLimit(req, {
-    keyPrefix: "pod:messages:get",
+    keyPrefix: "companion:messages:get",
     limit: 600,
     windowMs: 60 * 60 * 1000,
   });
@@ -28,43 +23,47 @@ export async function GET(req: Request) {
     }
 
     const db = await getCalmPulseDb();
-    const podId = await ensureUserPod(db, userId);
-    if (!podId) {
-      return NextResponse.json({ success: true, messages: [] });
-    }
-
-    if (!(await canUserAccessPod(db, podId, userId))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const messages = await db
-      .collection("pod_messages")
-      .find({ podId: podId.toString() })
+    
+    let messages = await db
+      .collection("companion_messages")
+      .find({ userId: userId.toString() })
       .sort({ createdAt: 1 })
       .limit(100)
       .toArray();
 
+    if (messages.length === 0) {
+      const initialDoc = {
+        userId: userId.toString(),
+        userName: "AI Companion",
+        text: "Hello! I am your AI Pacing Companion. I monitor your daily pacing indicators and can help guide you through anxiety triggers or schedule adjustments. How are you feeling today?",
+        isOwn: false,
+        createdAt: new Date(),
+      };
+      await db.collection("companion_messages").insertOne(initialDoc);
+      messages = [initialDoc as any];
+    }
+
     return NextResponse.json({
       success: true,
       messages: messages.map((m) => ({
-        id: m._id.toString(),
+        id: m._id ? m._id.toString() : `msg_${Date.now()}`,
         userId: m.userId,
         userName: m.userName,
         text: m.text,
         createdAt: m.createdAt,
-        isOwn: m.userId === userId.toString(),
+        isOwn: m.isOwn,
       })),
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error fetching pod messages:", error);
+    console.error("Error fetching companion messages:", error);
     return NextResponse.json({ error: "Internal Server Error", details: message }, { status: 500 });
   }
 }
 
 export async function POST(req: Request) {
   const limited = applyRateLimit(req, {
-    keyPrefix: "pod:messages:post",
+    keyPrefix: "companion:messages:post",
     limit: 120,
     windowMs: 60 * 60 * 1000,
     maxBodyBytes: 4 * 1024,
@@ -88,48 +87,118 @@ export async function POST(req: Request) {
     }
 
     const db = await getCalmPulseDb();
-    const podId = await ensureUserPod(db, userId);
-    if (!podId) {
-      return NextResponse.json({ error: "No pod assigned" }, { status: 400 });
-    }
-
-    if (!(await canUserAccessPod(db, podId, userId))) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    const pod = await db.collection("pods").findOne({ _id: podId });
-    const memberCount = pod?.memberIds?.length ?? 0;
-    if (memberCount < MIN_POD_SIZE) {
-      return NextResponse.json(
-        { error: `Pod chat unlocks when at least ${MIN_POD_SIZE} members join` },
-        { status: 400 }
-      );
-    }
-
-    const user = await db.collection("users").findOne({ _id: userId });
-    const userName = anonymizeName(user?.name || "Anonymous");
-
-    const doc = {
-      podId: podId.toString(),
+    
+    // Save user message
+    const userDoc = {
       userId: userId.toString(),
-      userName,
+      userName: "You",
       text,
+      isOwn: true,
       createdAt: new Date(),
     };
+    await db.collection("companion_messages").insertOne(userDoc);
 
-    const result = await db.collection("pod_messages").insertOne(doc);
+    // Get user statistics/context
+    const user = await db.collection("users").findOne({ _id: userId });
+    const goal = user?.goal || "Reduce Anxiety & Regulate Sleep";
+    const focusArea = user?.calculatedReport?.subtype || "General";
+    const anxietyScore = user?.calculatedReport?.anxietyScore ?? 6.8;
+    const completedCount = user?.completedActivities?.length || 0;
+    const totalCount = user?.activities?.length || 0;
+
+    // Fetch last 10 messages for conversation context
+    const recentChatHistory = await db
+      .collection("companion_messages")
+      .find({ userId: userId.toString() })
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .toArray();
+    recentChatHistory.reverse();
+
+    const historyPrompt = recentChatHistory
+      .map((m) => `${m.userName}: ${m.text}`)
+      .join("\n");
+
+    const apiKey = getGroqApiKey();
+    let botResponse = "";
+
+    if (apiKey) {
+      try {
+        const groq = createOpenAI({
+          baseURL: "https://api.groq.com/openai/v1",
+          apiKey,
+        });
+
+        const prompt = `You are a clinical AI pacing companion for CalmPulse.
+    
+USER STATS TODAY:
+- Goal: "${goal}"
+- Focus Area: "${focusArea}"
+- Current Anxiety Baseline Score: ${anxietyScore.toFixed(1)}/10
+- Habits Completed Today: ${completedCount} out of ${totalCount}
+
+RECENT CONVERSATION HISTORY:
+${historyPrompt}
+
+Generate a short, empathetic response (1-3 sentences) from the perspective of the AI Companion.
+- Reference their habit progress (${completedCount}/${totalCount}) and stress level (${anxietyScore.toFixed(1)}) if contextually relevant.
+- Suggest a somatic breathing check, screen limits, or pacing stroll if they are feeling anxious.
+- Do not repeat the welcome message. Keep it conversational and brief.`;
+
+        const response = await generateText({
+          model: groq("llama-3.3-70b-versatile"),
+          prompt,
+        });
+        botResponse = response.text.trim();
+      } catch (err) {
+        console.error("Error generating AI companion response:", err);
+      }
+    }
+
+    // Fallback response if AI fails or no apiKey
+    if (!botResponse) {
+      const lowerText = text.toLowerCase();
+      if (lowerText.includes("hello") || lowerText.includes("hi") || lowerText.includes("hey")) {
+        botResponse = `Hello! I'm here. Looking at your records today, you have completed ${completedCount} of your ${totalCount} daily pacing plan habits, and your current stress baseline is at ${anxietyScore.toFixed(1)}/10. What is on your mind?`;
+      } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
+        botResponse = `I hear you. If you are experiencing somatic spikes, I highly recommend clicking the red SOS button in the bottom right corner to start immediate breathing guidance. Or we can practice a 4-7-8 breathing pause right here.`;
+      } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
+        if (completedCount === 0) {
+          botResponse = `You haven't completed any pacing habits today yet. I recommend starting with the "Somatic Grounding Pause" (5m breathing break) on your checklist to help lower your ${anxietyScore.toFixed(1)} stress score.`;
+        } else if (completedCount < totalCount) {
+          botResponse = `You've checked off ${completedCount} pacing habits so far. Great effort! Try completing the remaining activities to satisfy today's pacing target.`;
+        } else {
+          botResponse = `Excellent work! You have completed all ${totalCount} pacing habits for today. Your stress baseline has been successfully decelerated.`;
+        }
+      } else {
+        botResponse = `Pacing is all about small, steady adjustments. Since your stress score is currently ${anxietyScore.toFixed(1)}, let's focus on setting tight boundaries on your digital notifications this evening.`;
+      }
+    }
+
+    // Save bot message
+    const botDoc = {
+      userId: userId.toString(),
+      userName: "AI Companion",
+      text: botResponse,
+      isOwn: false,
+      createdAt: new Date(),
+    };
+    const result = await db.collection("companion_messages").insertOne(botDoc);
 
     return NextResponse.json({
       success: true,
       message: {
         id: result.insertedId.toString(),
-        ...doc,
-        isOwn: true,
+        userId: botDoc.userId,
+        userName: botDoc.userName,
+        text: botDoc.text,
+        createdAt: botDoc.createdAt.toISOString(),
+        isOwn: false,
       },
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error posting pod message:", error);
+    console.error("Error posting companion message:", error);
     return NextResponse.json({ error: "Internal Server Error", details: message }, { status: 500 });
   }
 }

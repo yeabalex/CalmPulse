@@ -38,20 +38,39 @@ export default function CompanionChat({ completedCount, totalCount, anxietyScore
   const [error] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const fetchMessages = useCallback(() => {
-    const saved = localStorage.getItem("calmpulse_companion_messages");
-    if (saved) {
-      try {
-        setMessages(JSON.parse(saved));
-      } catch {
+  const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+
+  const fetchMessages = useCallback(async () => {
+    if (isDemo) {
+      const saved = localStorage.getItem("calmpulse_companion_messages");
+      if (saved) {
+        try {
+          setMessages(JSON.parse(saved));
+        } catch {
+          setMessages(INITIAL_DEMO_MESSAGES);
+        }
+      } else {
         setMessages(INITIAL_DEMO_MESSAGES);
+        localStorage.setItem("calmpulse_companion_messages", JSON.stringify(INITIAL_DEMO_MESSAGES));
       }
-    } else {
-      setMessages(INITIAL_DEMO_MESSAGES);
-      localStorage.setItem("calmpulse_companion_messages", JSON.stringify(INITIAL_DEMO_MESSAGES));
+      setLoading(false);
+      return;
     }
-    setLoading(false);
-  }, []);
+
+    try {
+      const res = await fetch("/api/pod/messages");
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setMessages(json.messages);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch messages:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [isDemo]);
 
   useEffect(() => {
     fetchMessages();
@@ -65,63 +84,100 @@ export default function CompanionChat({ completedCount, totalCount, anxietyScore
     if (!draft.trim() || sending) return;
     setSending(true);
 
-    const userMessage: ChatMessage = {
-      id: `msg_user_${Date.now()}`,
-      userId: "user",
-      userName: "You",
-      text: draft.trim(),
-      createdAt: new Date().toISOString(),
-      isOwn: true
-    };
-
-    const currentMessages = [...messages, userMessage];
-    setMessages(currentMessages);
-    localStorage.setItem("calmpulse_companion_messages", JSON.stringify(currentMessages));
-    setDraft("");
-    setSending(false);
-
-    // Simulate AI Pacing Companion response
-    setTimeout(() => {
-      let botResponse = "";
-
-      const lowerText = userMessage.text.toLowerCase();
-
-      if (lowerText.includes("hello") || lowerText.includes("hi") || lowerText.includes("hey")) {
-        botResponse = `Hello! I'm here. Looking at your records today, you have completed ${completedCount} of your ${totalCount} daily pacing plan habits, and your current stress baseline is at ${anxietyScore.toFixed(1)}/10. What is on your mind?`;
-      } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
-        botResponse = `I hear you. If you are experiencing somatic spikes, I highly recommend clicking the red SOS button in the bottom right corner to start immediate breathing guidance. Or we can practice a 4-7-8 breathing pause right here.`;
-      } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
-        if (completedCount === 0) {
-          botResponse = `You haven't completed any pacing habits today yet. I recommend starting with the "Somatic Grounding Pause" (5m breathing break) on your checklist to help lower your ${anxietyScore.toFixed(1)} stress score.`;
-        } else if (completedCount < totalCount) {
-          botResponse = `You've checked off ${completedCount} pacing habits so far. Great effort! Try completing the remaining activities to satisfy today's pacing target.`;
-        } else {
-          botResponse = `Excellent work! You have completed all ${totalCount} pacing habits for today. Your stress baseline has been successfully decelerated.`;
-        }
-      } else {
-        // Standard conversational responses incorporating user stats
-        const answers = [
-          `Pacing is all about small, steady adjustments. Since your stress score is currently ${anxietyScore.toFixed(1)}, let's focus on setting tight boundaries on your digital notifications this evening.`,
-          `I notice you have checked off ${completedCount}/${totalCount} habits today. How are you feeling physically? Are you experiencing any shoulder tension or chest tightness?`,
-          `That is helpful context. Remember, the goal isn't productivity—it's bio-regulatory stability. Take a step back and engage in a somatic pause if you need to.`,
-          `I am keeping track of your logs. Your historical data suggests you recover faster on days when you complete your pacing strolls. Let's try to do that today.`
-        ];
-        botResponse = answers[Math.floor(Math.random() * answers.length)];
-      }
-
-      const botMessage: ChatMessage = {
-        id: `msg_bot_${Date.now()}`,
-        userId: "companion",
-        userName: "AI Companion",
-        text: botResponse,
+    if (isDemo) {
+      const userMessage: ChatMessage = {
+        id: `msg_user_${Date.now()}`,
+        userId: "user",
+        userName: "You",
+        text: draft.trim(),
         createdAt: new Date().toISOString(),
-        isOwn: false
+        isOwn: true
       };
 
-      const finalMessages = [...currentMessages, botMessage];
-      setMessages(finalMessages);
-      localStorage.setItem("calmpulse_companion_messages", JSON.stringify(finalMessages));
-    }, 1200);
+      const currentMessages = [...messages, userMessage];
+      setMessages(currentMessages);
+      localStorage.setItem("calmpulse_companion_messages", JSON.stringify(currentMessages));
+      setDraft("");
+      setSending(false);
+
+      // Simulate AI Pacing Companion response
+      setTimeout(() => {
+        let botResponse = "";
+
+        const lowerText = userMessage.text.toLowerCase();
+
+        if (lowerText.includes("hello") || lowerText.includes("hi") || lowerText.includes("hey")) {
+          botResponse = `Hello! I'm here. Looking at your records today, you have completed ${completedCount} of your ${totalCount} daily pacing plan habits, and your current stress baseline is at ${anxietyScore.toFixed(1)}/10. What is on your mind?`;
+        } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
+          botResponse = `I hear you. If you are experiencing somatic spikes, I highly recommend clicking the red SOS button in the bottom right corner to start immediate breathing guidance. Or we can practice a 4-7-8 breathing pause right here.`;
+        } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
+          if (completedCount === 0) {
+            botResponse = `You haven't completed any pacing habits today yet. I recommend starting with the "Somatic Grounding Pause" (5m breathing break) on your checklist to help lower your ${anxietyScore.toFixed(1)} stress score.`;
+          } else if (completedCount < totalCount) {
+            botResponse = `You've checked off ${completedCount} pacing habits so far. Great effort! Try completing the remaining activities to satisfy today's pacing target.`;
+          } else {
+            botResponse = `Excellent work! You have completed all ${totalCount} pacing habits for today. Your stress baseline has been successfully decelerated.`;
+          }
+        } else {
+          // Standard conversational responses incorporating user stats
+          const answers = [
+            `Pacing is all about small, steady adjustments. Since your stress score is currently ${anxietyScore.toFixed(1)}, let's focus on setting tight boundaries on your digital notifications this evening.`,
+            `I notice you have checked off ${completedCount}/${totalCount} habits today. How are you feeling physically? Are you experiencing any shoulder tension or chest tightness?`,
+            `That is helpful context. Remember, the goal isn't productivity—it's bio-regulatory stability. Take a step back and engage in a somatic pause if you need to.`,
+            `I am keeping track of your logs. Your historical data suggests you recover faster on days when you complete your pacing strolls. Let's try to do that today.`
+          ];
+          botResponse = answers[Math.floor(Math.random() * answers.length)];
+        }
+
+        const botMessage: ChatMessage = {
+          id: `msg_bot_${Date.now()}`,
+          userId: "companion",
+          userName: "AI Companion",
+          text: botResponse,
+          createdAt: new Date().toISOString(),
+          isOwn: false
+        };
+
+        const finalMessages = [...currentMessages, botMessage];
+        setMessages(finalMessages);
+        localStorage.setItem("calmpulse_companion_messages", JSON.stringify(finalMessages));
+      }, 1200);
+      return;
+    }
+
+    // Real account: send message to the backend
+    try {
+      const userMessage: ChatMessage = {
+        id: `msg_user_${Date.now()}`,
+        userId: "user",
+        userName: "You",
+        text: draft.trim(),
+        createdAt: new Date().toISOString(),
+        isOwn: true
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+      setDraft("");
+
+      const res = await fetch("/api/pod/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: userMessage.text }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.message) {
+          setMessages((prev) => [...prev, json.message]);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to send companion message:", err);
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
