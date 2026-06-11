@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, Compass, UserCheck, Activity } from "lucide-react";
+import { MessageSquare, Compass, Sparkles, Activity } from "lucide-react";
 
 export default function HowItWorks() {
   const steps = [
@@ -18,14 +18,14 @@ export default function HowItWorks() {
     },
     {
       step: "03",
-      title: "Anonymous Peer Cohorts",
-      desc: "Get paired in small, secure groups of 5-8 peers at a similar milestone. Pacing alongside others reduces isolation and helps build long-term accountability.",
-      icon: UserCheck,
+      title: "AI Pacing Companion",
+      desc: "Receive real-time support from your 1-on-1 AI pacing companion. Get personalized advice on habits, trigger management, stress patterns, and somatic pauses.",
+      icon: Sparkles,
     },
     {
       step: "04",
       title: "Continuous Recalibration",
-      desc: "Log daily reflections. As your emotional tracking logs improve or fluctuate, our feedback engine recalibrates your pace goals and updates your cohort recommendations.",
+      desc: "Log daily reflections. As your emotional tracking logs improve or fluctuate, our feedback engine recalibrates your pace goals and updates your pacing baseline trends.",
       icon: Activity,
     },
   ];
@@ -37,7 +37,7 @@ export default function HowItWorks() {
           How It Works
         </h2>
         <p className="text-slate-650 text-sm max-w-lg mx-auto">
-          An AI-driven closed-loop workflow that continuously refines your pacing guidelines and builds peer accountability.
+          An AI-driven closed-loop workflow that continuously refines your pacing guidelines and assists your stress-resilience recovery.
         </p>
       </div>
 

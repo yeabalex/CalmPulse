@@ -74,7 +74,7 @@ export default function OnboardingComplete({ cohortId, assessment }: OnboardingC
           Onboarding Complete!
         </h2>
         <p className="text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-          Your pacing scheduler is online and you have been safely integrated into <strong>Cohort Pod #{podInfo?.podNumber ?? cohortId}</strong>. Welcome to CalmPulse.
+          Your pacing scheduler is online and your 1-on-1 AI pacing companion is ready. Welcome to CalmPulse.
         </p>
       </GlassCard>
 

@@ -9,7 +9,8 @@ import {
 } from "lucide-react";
 import GlassCard from "@/components/shared/GlassCard";
 import TensionDial from "@/components/shared/vitals/TensionDial";
-import PodChat from "@/components/dashboard/PodChat";
+import CompanionChat from "@/components/dashboard/PodChat";
+import HistoryTab, { type HistoryEntry } from "@/components/dashboard/HistoryTab";
 import ActivityDetailModal, { type ActivityDetail } from "@/components/dashboard/ActivityDetailModal";
 import PanicRoomModal from "@/components/dashboard/PanicRoomModal";
 import {
@@ -18,6 +19,36 @@ import {
   setCachedActivityDetail,
 } from "@/lib/activityDetailCache";
 import { useAuth } from "@/lib/useAuth";
+
+const MOCK_HISTORY_LOGS: HistoryEntry[] = [
+  {
+    id: "hist_1",
+    date: "Wednesday, June 10",
+    anxietyScore: 7.2,
+    ventText: "Felt shoulder tension spike during the team sync due to a sudden release deadline. Struggled to focus afterwards.",
+    completedCount: 3,
+    totalCount: 3,
+    completedHabits: ["Somatic Grounding Pause", "Digital Communication Limit", "Calm Pacing Walking"]
+  },
+  {
+    id: "hist_2",
+    date: "Tuesday, June 9",
+    anxietyScore: 6.5,
+    ventText: "Somatic breaks helped me stay focused, but got late screen alerts because I stayed up scrolling.",
+    completedCount: 2,
+    totalCount: 3,
+    completedHabits: ["Somatic Grounding Pause", "Calm Pacing Walking"]
+  },
+  {
+    id: "hist_3",
+    date: "Monday, June 8",
+    anxietyScore: 8.0,
+    ventText: "Extreme chest tightness after arguing about task prioritization. Felt very reactive and overwhelmed.",
+    completedCount: 1,
+    totalCount: 3,
+    completedHabits: ["Somatic Grounding Pause"]
+  }
+];
 
 const INITIAL_DEMO_DATA = {
   name: "Dr. Hackathon Judge",
@@ -56,6 +87,7 @@ const INITIAL_DEMO_DATA = {
     { id: "act_3", name: "Calm Pacing Walking", description: "10-minute slow pacing stroll post-lunch", type: "Physical" }
   ],
   completedActivities: [],
+  historyLogs: MOCK_HISTORY_LOGS,
   pod: {
     id: "pod_42",
     podNumber: 42,
@@ -322,6 +354,18 @@ export default function DashboardPage() {
         const newScore = parseFloat(ratings.anxiety.toFixed(1));
         updatedProgress[5] = { dayName: "Sat", anxietyScore: newScore, hasData: true };
 
+        const newHistoryEntry: HistoryEntry = {
+          id: `hist_${Date.now()}`,
+          date: "Thursday, June 11",
+          anxietyScore: newScore,
+          ventText: ventText || "Logged a daily reflection and recalibrated pacing indicators.",
+          completedCount: data.completedActivities?.length || 0,
+          totalCount: data.activities?.length || 0,
+          completedHabits: data.activities
+            ?.filter((a: any) => data.completedActivities?.includes(a.id))
+            ?.map((a: any) => a.name) || []
+        };
+
         const updated = {
           ...data,
           streak: data.streak + 1,
@@ -333,6 +377,7 @@ export default function DashboardPage() {
             pacingRate: newScore > 6 ? "50% Decelerated" : "30% Decelerated"
           },
           completedActivities: [], // reset checklist
+          historyLogs: [newHistoryEntry, ...(data.historyLogs || MOCK_HISTORY_LOGS)],
           insights: `Daily reflection submitted! Based on your rated stress score of ${newScore}/10, your pacing baseline has been recalibrated to ${newScore > 6 ? "50% Decelerated" : "30% Decelerated"}.`
         };
 
@@ -493,9 +538,9 @@ export default function DashboardPage() {
                 </span>
               </div>
               <div className="p-3 bg-white/70 border border-violet-100/50 rounded-2xl space-y-1">
-                <span className="font-extrabold text-slate-850 block">3. Peer Cohort Chat</span>
+                <span className="font-extrabold text-slate-850 block">3. AI Pacing Companion</span>
                 <span className="text-[10px] text-slate-500 block leading-relaxed">
-                  Send a message in the pod chat. Your anonymous phase-matched peers will respond to you in real-time.
+                  Ask your 1-on-1 progress-aware AI coach about habits, triggers, stress levels, or screen time targets.
                 </span>
               </div>
             </div>
@@ -530,7 +575,7 @@ export default function DashboardPage() {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              Premium (POD)
+              Premium
             </button>
           </div>
         </div>
@@ -563,15 +608,25 @@ export default function DashboardPage() {
             )}
           </button>
           <button
-            onClick={() => setActiveTab("pod")}
+            onClick={() => setActiveTab("companion")}
             className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
-              activeTab === "pod"
+              activeTab === "companion"
                 ? "border-slate-900 text-slate-900 font-extrabold"
                 : "border-transparent text-slate-400 hover:text-slate-600"
             }`}
           >
-            Peer Pod Group
+            AI Companion
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          </button>
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "history"
+                ? "border-slate-900 text-slate-900 font-extrabold"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            History Log
           </button>
         </div>
 
@@ -803,36 +858,21 @@ export default function DashboardPage() {
           </>
         )}
 
-        {/* Cohort Pod Group Chat */}
-        {activeTab === "pod" && (
-          <div className="grid md:grid-cols-3 gap-8 animate-fade-in">
-          <div className="md:col-span-2">
-            <PodChat pod={data.pod} />
+        {/* AI Companion Chat */}
+        {activeTab === "companion" && (
+          <div className="animate-fade-in w-full">
+            <CompanionChat
+              completedCount={data.completedActivities?.length || 0}
+              totalCount={data.activities?.length || 0}
+              anxietyScore={data.report?.anxietyScore || 6.8}
+            />
           </div>
-          <GlassCard className="p-6 shadow-md bg-white border border-slate-200/60 space-y-4">
-            <h3 className="text-sm font-bold text-slate-900">Your Cohort Pod</h3>
-            {data.pod ? (
-              <>
-                <p className="text-[10px] text-slate-500 leading-relaxed">
-                  You are in <strong>Pod #{data.pod.podNumber}</strong> with {data.pod.memberCount} member{data.pod.memberCount !== 1 ? "s" : ""} focused on {data.pod.focusArea}.
-                </p>
-                <div className="space-y-2">
-                  {data.pod.members.map((m: { id: string; displayName: string; activeToday: boolean; isCurrentUser: boolean }) => (
-                    <div key={m.id} className="flex items-center justify-between text-xs">
-                      <span className={`font-semibold ${m.isCurrentUser ? "text-slate-900" : "text-slate-600"}`}>
-                        {m.displayName}{m.isCurrentUser ? " (You)" : ""}
-                      </span>
-                      <span className={`text-[9px] font-bold ${m.activeToday ? "text-emerald-600" : "text-slate-400"}`}>
-                        {m.activeToday ? "Active" : "—"}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            ) : (
-              <p className="text-[10px] text-slate-500">Finish onboarding to be matched into a pod of 2–5 peers.</p>
-            )}
-          </GlassCard>
+        )}
+
+        {/* History Log */}
+        {activeTab === "history" && (
+          <div className="animate-fade-in w-full">
+            <HistoryTab history={data.historyLogs || MOCK_HISTORY_LOGS} />
           </div>
         )}
 

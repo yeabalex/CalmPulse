@@ -70,7 +70,7 @@ export default function Home() {
           <div>
             <h4 className="text-xs font-bold text-slate-900">Try CalmPulse in 1-Click</h4>
             <p className="text-[10px] text-slate-500 mt-1 leading-relaxed">
-              Explore the full interactive dashboard, pacing checklist, cohort pod chat, and daily reflections offline with zero database or API setup.
+              Explore the full interactive dashboard, pacing checklist, AI companion chat, and daily reflections offline with zero database or API setup.
             </p>
           </div>
           <button
