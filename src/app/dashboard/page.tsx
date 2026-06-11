@@ -11,6 +11,7 @@ import GlassCard from "@/components/shared/GlassCard";
 import TensionDial from "@/components/shared/vitals/TensionDial";
 import PodChat from "@/components/dashboard/PodChat";
 import ActivityDetailModal, { type ActivityDetail } from "@/components/dashboard/ActivityDetailModal";
+import PanicRoomModal from "@/components/dashboard/PanicRoomModal";
 import {
   getCachedActivityDetail,
   pruneExpiredActivityDetails,
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
   const [voicePlaying, setVoicePlaying] = useState(false);
+  const [panicRoomOpen, setPanicRoomOpen] = useState(false);
 
   // Reflection Modal state
   const [reflectionOpen, setReflectionOpen] = useState(false);
@@ -1013,6 +1015,26 @@ export default function DashboardPage() {
           </GlassCard>
         </div>
       )}
+
+      {/* Floating Panic Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <button
+          onClick={() => setPanicRoomOpen(true)}
+          className="group relative flex items-center justify-center w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_20px_5px_rgba(225,29,72,0.3)] hover:shadow-[0_0_25px_10px_rgba(225,29,72,0.5)] transition-all duration-300 animate-pulse hover:scale-[1.05] cursor-pointer"
+          title="Panic SOS Button"
+        >
+          <ShieldAlert className="w-7 h-7" />
+          <span className="absolute right-full mr-3 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md border border-slate-800">
+            Panic SOS
+          </span>
+        </button>
+      </div>
+
+      {/* Panic Room Modal */}
+      <PanicRoomModal 
+        isOpen={panicRoomOpen} 
+        onClose={() => setPanicRoomOpen(false)} 
+      />
 
     </div>
   );
