@@ -1,12 +1,26 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getCurrentUserObjectId } from "@/lib/auth";
 import { getCalmPulseDb } from "@/lib/mongodb";
 import { applyRateLimit } from "@/lib/rateLimit";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { getGroqApiKey } from "@/lib/ai";
+import {
+  buildCompanionMemory,
+  extractDurableMemoriesAfterChat,
+} from "@/lib/companionMemory";
+import type { ObjectId } from "mongodb";
 
 export const runtime = "nodejs";
+
+interface CompanionMessageDoc {
+  _id?: ObjectId;
+  userId?: string;
+  userName?: string;
+  text?: string;
+  createdAt?: Date | string;
+  isOwn?: boolean;
+}
 
 export async function GET(req: Request) {
   const limited = applyRateLimit(req, {
@@ -25,7 +39,7 @@ export async function GET(req: Request) {
     const db = await getCalmPulseDb();
     
     let messages = await db
-      .collection("companion_messages")
+      .collection<CompanionMessageDoc>("companion_messages")
       .find({ userId: userId.toString() })
       .sort({ createdAt: 1 })
       .limit(100)
@@ -39,8 +53,8 @@ export async function GET(req: Request) {
         isOwn: false,
         createdAt: new Date(),
       };
-      await db.collection("companion_messages").insertOne(initialDoc);
-      messages = [initialDoc as any];
+      const result = await db.collection("companion_messages").insertOne(initialDoc);
+      messages = [{ ...initialDoc, _id: result.insertedId }];
     }
 
     return NextResponse.json({
@@ -98,26 +112,8 @@ export async function POST(req: Request) {
     };
     await db.collection("companion_messages").insertOne(userDoc);
 
-    // Get user statistics/context
-    const user = await db.collection("users").findOne({ _id: userId });
-    const goal = user?.goal || "Reduce Anxiety & Regulate Sleep";
-    const focusArea = user?.calculatedReport?.subtype || "General";
-    const anxietyScore = user?.calculatedReport?.anxietyScore ?? 6.8;
-    const completedCount = user?.completedActivities?.length || 0;
-    const totalCount = user?.activities?.length || 0;
-
-    // Fetch last 10 messages for conversation context
-    const recentChatHistory = await db
-      .collection("companion_messages")
-      .find({ userId: userId.toString() })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .toArray();
-    recentChatHistory.reverse();
-
-    const historyPrompt = recentChatHistory
-      .map((m) => `${m.userName}: ${m.text}`)
-      .join("\n");
+    const memory = await buildCompanionMemory(db, userId);
+    const { completedCount, totalCount, anxietyScore } = memory;
 
     const apiKey = getGroqApiKey();
     let botResponse = "";
@@ -129,21 +125,36 @@ export async function POST(req: Request) {
           apiKey,
         });
 
-        const prompt = `You are a clinical AI pacing companion for CalmPulse.
-    
-USER STATS TODAY:
-- Goal: "${goal}"
-- Focus Area: "${focusArea}"
-- Current Anxiety Baseline Score: ${anxietyScore.toFixed(1)}/10
-- Habits Completed Today: ${completedCount} out of ${totalCount}
+        const prompt = `You are the CalmPulse AI pacing companion. You support behavioral pacing, stress regulation, reflection, and habit follow-through.
 
-RECENT CONVERSATION HISTORY:
-${historyPrompt}
+Safety boundaries:
+- You are not a therapist, doctor, crisis service, or emergency service.
+- If the user mentions immediate danger, self-harm, fainting, severe chest pain, or inability to stay safe, encourage urgent local/emergency support.
+- Do not diagnose. Keep guidance practical, brief, and grounded in the user's CalmPulse data.
 
-Generate a short, empathetic response (1-3 sentences) from the perspective of the AI Companion.
-- Reference their habit progress (${completedCount}/${totalCount}) and stress level (${anxietyScore.toFixed(1)}) if contextually relevant.
-- Suggest a somatic breathing check, screen limits, or pacing stroll if they are feeling anxious.
-- Do not repeat the welcome message. Keep it conversational and brief.`;
+PROFILE MEMORY (stable user data, high authority):
+${memory.profileMemory}
+
+CURRENT STATE MEMORY (always current, high authority):
+${memory.currentStateMemory}
+
+HISTORY MEMORY (wellness trends and latest raw daily log):
+${memory.historyMemory}
+
+DURABLE MEMORY (saved personalization facts from prior interactions):
+${memory.durableMemory}
+
+CONVERSATION MEMORY (rolling state plus recent raw messages from this single companion thread):
+${memory.conversationMemory}
+
+Current user message:
+${text}
+
+Generate a short, empathetic response (1-3 sentences) from the AI Companion.
+- Use profile and current state when relevant, especially habit progress (${completedCount}/${totalCount}) and latest baseline (${anxietyScore.toFixed(1)}/10).
+- Prefer specific suggestions tied to their activities, triggers, history, or durable memories.
+- Do not claim certainty beyond the provided sources.
+- Do not repeat the welcome message.`;
 
         const response = await generateText({
           model: groq("llama-3.3-70b-versatile"),
@@ -184,6 +195,10 @@ Generate a short, empathetic response (1-3 sentences) from the perspective of th
       createdAt: new Date(),
     };
     const result = await db.collection("companion_messages").insertOne(botDoc);
+
+    after(async () => {
+      await extractDurableMemoriesAfterChat(db, userId, text, botResponse, memory);
+    });
 
     return NextResponse.json({
       success: true,
