@@ -1,12 +1,30 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getCurrentUserObjectId } from "@/lib/auth";
 import { getCalmPulseDb } from "@/lib/mongodb";
 import { applyRateLimit } from "@/lib/rateLimit";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
-import { getGroqApiKey } from "@/lib/ai";
+import { getGroqApiKey, GROQ_COMPANION_MODEL } from "@/lib/ai";
+import {
+  buildCompanionMemory,
+  extractDurableMemoriesAfterChat,
+} from "@/lib/companionMemory";
+import type { ObjectId } from "mongodb";
 
 export const runtime = "nodejs";
+
+interface CompanionMessageDoc {
+  _id?: ObjectId;
+  userId?: string;
+  userName?: string;
+  text?: string;
+  createdAt?: Date | string;
+  isOwn?: boolean;
+}
+
+function containsGreeting(text: string) {
+  return /\b(hello|hi|hey)\b/i.test(text);
+}
 
 export async function GET(req: Request) {
   const limited = applyRateLimit(req, {
@@ -25,7 +43,7 @@ export async function GET(req: Request) {
     const db = await getCalmPulseDb();
     
     let messages = await db
-      .collection("companion_messages")
+      .collection<CompanionMessageDoc>("companion_messages")
       .find({ userId: userId.toString() })
       .sort({ createdAt: 1 })
       .limit(100)
@@ -35,12 +53,12 @@ export async function GET(req: Request) {
       const initialDoc = {
         userId: userId.toString(),
         userName: "AI Companion",
-        text: "Hello! I am your AI Pacing Companion. I monitor your daily pacing indicators and can help guide you through anxiety triggers or schedule adjustments. How are you feeling today?",
+        text: "Hello, I'm here with you. What feels most important to talk through right now?",
         isOwn: false,
         createdAt: new Date(),
       };
-      await db.collection("companion_messages").insertOne(initialDoc);
-      messages = [initialDoc as any];
+      const result = await db.collection("companion_messages").insertOne(initialDoc);
+      messages = [{ ...initialDoc, _id: result.insertedId }];
     }
 
     return NextResponse.json({
@@ -98,26 +116,8 @@ export async function POST(req: Request) {
     };
     await db.collection("companion_messages").insertOne(userDoc);
 
-    // Get user statistics/context
-    const user = await db.collection("users").findOne({ _id: userId });
-    const goal = user?.goal || "Reduce Anxiety & Regulate Sleep";
-    const focusArea = user?.calculatedReport?.subtype || "General";
-    const anxietyScore = user?.calculatedReport?.anxietyScore ?? 6.8;
-    const completedCount = user?.completedActivities?.length || 0;
-    const totalCount = user?.activities?.length || 0;
-
-    // Fetch last 10 messages for conversation context
-    const recentChatHistory = await db
-      .collection("companion_messages")
-      .find({ userId: userId.toString() })
-      .sort({ createdAt: -1 })
-      .limit(10)
-      .toArray();
-    recentChatHistory.reverse();
-
-    const historyPrompt = recentChatHistory
-      .map((m) => `${m.userName}: ${m.text}`)
-      .join("\n");
+    const memory = await buildCompanionMemory(db, userId);
+    const { completedCount, totalCount, anxietyScore } = memory;
 
     const apiKey = getGroqApiKey();
     let botResponse = "";
@@ -129,25 +129,46 @@ export async function POST(req: Request) {
           apiKey,
         });
 
-        const prompt = `You are a clinical AI pacing companion for CalmPulse.
-    
-USER STATS TODAY:
-- Goal: "${goal}"
-- Focus Area: "${focusArea}"
-- Current Anxiety Baseline Score: ${anxietyScore.toFixed(1)}/10
-- Habits Completed Today: ${completedCount} out of ${totalCount}
+        const prompt = `You are the CalmPulse AI pacing companion: a warm, direct, practical coach for pacing, stress regulation, reflection, and habit follow-through.
 
-RECENT CONVERSATION HISTORY:
-${historyPrompt}
+Safety boundaries:
+- You are not a therapist, doctor, crisis service, or emergency service.
+- If the user mentions immediate danger, self-harm, fainting, severe chest pain, or inability to stay safe, encourage urgent local/emergency support.
+- Do not diagnose or overstate certainty.
 
-Generate a short, empathetic response (1-3 sentences) from the perspective of the AI Companion.
-- Reference their habit progress (${completedCount}/${totalCount}) and stress level (${anxietyScore.toFixed(1)}) if contextually relevant.
-- Suggest a somatic breathing check, screen limits, or pacing stroll if they are feeling anxious.
-- Do not repeat the welcome message. Keep it conversational and brief.`;
+Conversation style:
+- Sound like a calm person texting, not a report.
+- Keep responses natural, specific, and concise: usually 1-3 sentences.
+- Do not say things like "based on your data", "your records show", or "from the information provided" unless the user asks about their progress, plan, logs, or history.
+- Use CalmPulse context silently to choose better advice. Mention specific numbers, activities, triggers, memories, or history only when they directly answer the user's message.
+- If the user is venting, start by reflecting the feeling before suggesting one small next step.
+- If the user asks what to do, offer one clear action they can start now.
+- Do not repeat the welcome message.
+
+PROFILE MEMORY (stable user data, high authority):
+${memory.profileMemory}
+
+CURRENT STATE MEMORY (always current, high authority):
+${memory.currentStateMemory}
+
+HISTORY MEMORY (wellness trends and latest raw daily log):
+${memory.historyMemory}
+
+DURABLE MEMORY (saved personalization facts from prior interactions):
+${memory.durableMemory}
+
+CONVERSATION MEMORY (rolling state plus recent raw messages from this single companion thread):
+${memory.conversationMemory}
+
+Current user message:
+${text}
+
+Write the companion's next reply.`;
 
         const response = await generateText({
-          model: groq("llama-3.3-70b-versatile"),
+          model: groq(GROQ_COMPANION_MODEL),
           prompt,
+          temperature: 0.7,
         });
         botResponse = response.text.trim();
       } catch (err) {
@@ -157,21 +178,23 @@ Generate a short, empathetic response (1-3 sentences) from the perspective of th
 
     // Fallback response if AI fails or no apiKey
     if (!botResponse) {
-      const lowerText = text.toLowerCase();
-      if (lowerText.includes("hello") || lowerText.includes("hi") || lowerText.includes("hey")) {
-        botResponse = `Hello! I'm here. Looking at your records today, you have completed ${completedCount} of your ${totalCount} daily pacing plan habits, and your current stress baseline is at ${anxietyScore.toFixed(1)}/10. What is on your mind?`;
-      } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
-        botResponse = `I hear you. If you are experiencing somatic spikes, I highly recommend clicking the red SOS button in the bottom right corner to start immediate breathing guidance. Or we can practice a 4-7-8 breathing pause right here.`;
-      } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
-        if (completedCount === 0) {
-          botResponse = `You haven't completed any pacing habits today yet. I recommend starting with the "Somatic Grounding Pause" (5m breathing break) on your checklist to help lower your ${anxietyScore.toFixed(1)} stress score.`;
-        } else if (completedCount < totalCount) {
-          botResponse = `You've checked off ${completedCount} pacing habits so far. Great effort! Try completing the remaining activities to satisfy today's pacing target.`;
-        } else {
-          botResponse = `Excellent work! You have completed all ${totalCount} pacing habits for today. Your stress baseline has been successfully decelerated.`;
-        }
+      if (containsGreeting(text)) {
+        botResponse = "Hello, I'm here with you. What feels most important to talk through right now?";
       } else {
-        botResponse = `Pacing is all about small, steady adjustments. Since your stress score is currently ${anxietyScore.toFixed(1)}, let's focus on setting tight boundaries on your digital notifications this evening.`;
+        const lowerText = text.toLowerCase();
+        if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
+          botResponse = "I hear you. Try one slow 4-7-8 breathing cycle with me now, and if this feels urgent or unsafe, use local emergency support or the SOS button for immediate grounding.";
+        } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
+          if (completedCount === 0) {
+            botResponse = `Start with one small reset: the "Somatic Grounding Pause" on your checklist is a good first step. Keep it simple and do just that before deciding on the next task.`;
+          } else if (completedCount < totalCount) {
+            botResponse = `You've completed ${completedCount} of ${totalCount} pacing habits today. Pick the easiest remaining one next so the plan keeps moving without adding pressure.`;
+          } else {
+            botResponse = `You've completed all ${totalCount} pacing habits today. Let the rest of the day be maintenance: lower stimulation, keep transitions gentle, and avoid adding extra obligations.`;
+          }
+        } else {
+          botResponse = "Let's keep this small and concrete. Name the one thing that feels heaviest right now, and we can turn it into the next manageable step.";
+        }
       }
     }
 
@@ -184,6 +207,10 @@ Generate a short, empathetic response (1-3 sentences) from the perspective of th
       createdAt: new Date(),
     };
     const result = await db.collection("companion_messages").insertOne(botDoc);
+
+    after(async () => {
+      await extractDurableMemoriesAfterChat(db, userId, text, botResponse, memory);
+    });
 
     return NextResponse.json({
       success: true,

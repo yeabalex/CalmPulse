@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 const { loadEnvConfig } = require("@next/env");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 
@@ -61,6 +62,9 @@ async function run() {
     await db.collection("users").createIndex({ podId: 1 });
     await db.collection("pods").createIndex({ focusArea: 1, createdAt: 1 });
     await db.collection("pod_messages").createIndex({ podId: 1, createdAt: 1 });
+    await db.collection("companion_messages").createIndex({ userId: 1, createdAt: -1 });
+    await db.collection("companion_memory_state").createIndex({ userId: 1, type: 1 }, { unique: true });
+    await db.collection("companion_memories").createIndex({ userId: 1, updatedAt: -1 });
     // counters uses _id as the counter key — no extra index needed
 
     console.log("\x1b[32m%s\x1b[0m", `Indexes created on database "${dbName}".`);
