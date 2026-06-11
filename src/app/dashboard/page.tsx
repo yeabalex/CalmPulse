@@ -1,14 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { 
   Zap, Activity, Heart, Flame, ShieldAlert, Award, 
-  Calendar, CheckCircle, Brain, Moon, Sparkles, LogOut, 
-  ChevronRight, ArrowRight, Loader2, Play, Volume2, Download, RefreshCw 
+  Calendar, CheckCircle, Brain, Sparkles, LogOut, 
+  ChevronRight, ArrowRight, Loader2, Play, Volume2, Download, Info
 } from "lucide-react";
 import GlassCard from "@/components/shared/GlassCard";
 import TensionDial from "@/components/shared/vitals/TensionDial";
+import PodChat from "@/components/dashboard/PodChat";
+import ActivityDetailModal, { type ActivityDetail } from "@/components/dashboard/ActivityDetailModal";
+import {
+  getCachedActivityDetail,
+  pruneExpiredActivityDetails,
+  setCachedActivityDetail,
+} from "@/lib/activityDetailCache";
 import { useAuth } from "@/lib/useAuth";
 
 export default function DashboardPage() {
@@ -30,6 +37,19 @@ export default function DashboardPage() {
   const [questionsLoading, setQuestionsLoading] = useState(false);
   const [submittingReflection, setSubmittingReflection] = useState(false);
 
+  // Activity detail modal (generated on demand via LLM)
+  const [detailActivity, setDetailActivity] = useState<{
+    id: string;
+    name: string;
+    type: string;
+    description?: string;
+  } | null>(null);
+  const [activityDetail, setActivityDetail] = useState<ActivityDetail | null>(null);
+  const [detailForActivityId, setDetailForActivityId] = useState<string | null>(null);
+  const [activityDetailLoading, setActivityDetailLoading] = useState(false);
+  const [activityDetailError, setActivityDetailError] = useState("");
+  const activityDetailRequestRef = useRef<string | null>(null);
+
   // Load dashboard telemetry data
   const fetchDashboardData = async () => {
     try {
@@ -46,10 +66,69 @@ export default function DashboardPage() {
   };
 
   useEffect(() => {
+    pruneExpiredActivityDetails();
+  }, []);
+
+  useEffect(() => {
     if (user) {
       fetchDashboardData();
     }
   }, [user]);
+
+  const openActivityDetail = async (act: { id: string; name: string; type: string; description?: string }) => {
+    activityDetailRequestRef.current = act.id;
+
+    setDetailActivity(act);
+    setActivityDetailError("");
+    setActivityDetail(null);
+    setDetailForActivityId(null);
+    setActivityDetailLoading(true);
+
+    const cached = getCachedActivityDetail(act.id);
+    if (cached) {
+      if (activityDetailRequestRef.current !== act.id) return;
+      setActivityDetail(cached);
+      setDetailForActivityId(act.id);
+      setActivityDetailLoading(false);
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/dashboard/activity-detail", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ activityId: act.id }),
+      });
+      const json = await res.json();
+
+      if (activityDetailRequestRef.current !== act.id) return;
+
+      if (!res.ok) {
+        setActivityDetailError(json.error || "Failed to generate activity guide");
+        return;
+      }
+
+      setActivityDetail(json.detail);
+      setDetailForActivityId(act.id);
+      setCachedActivityDetail(act.id, json.detail);
+    } catch {
+      if (activityDetailRequestRef.current !== act.id) return;
+      setActivityDetailError("Failed to generate activity guide. Please try again.");
+    } finally {
+      if (activityDetailRequestRef.current === act.id) {
+        setActivityDetailLoading(false);
+      }
+    }
+  };
+
+  const closeActivityDetail = () => {
+    activityDetailRequestRef.current = null;
+    setDetailActivity(null);
+    setActivityDetail(null);
+    setDetailForActivityId(null);
+    setActivityDetailError("");
+    setActivityDetailLoading(false);
+  };
 
   // Handle activity checklist complete toggle
   const toggleActivity = async (activityId: string, isCompleted: boolean) => {
@@ -150,24 +229,44 @@ export default function DashboardPage() {
   const chartHeight = 120;
   const chartWidth = 500;
   const points = data.weeklyProgress || [];
-  
-  // Map baseline anxiety scores to SVG Y-coordinates (higher anxiety is higher on chart, so subtract from height)
-  // Max anxiety score = 10, Min = 1
+  const hasWeeklyData = (data.weeklyDataPointCount ?? 0) > 0;
+
   const mapY = (score: number) => {
     const minVal = 1;
     const maxVal = 10;
     const scale = (score - minVal) / (maxVal - minVal);
-    // Invert so higher score represents higher Y (towards top of card, which has smaller Y offset in SVG)
     return chartHeight - 20 - scale * (chartHeight - 40);
   };
 
   const mapX = (index: number) => {
-    if (points.length <= 1) return 0;
+    if (points.length <= 1) return chartWidth / 2;
     return 30 + index * ((chartWidth - 60) / (points.length - 1));
   };
 
-  // Generate SVG polyline string for anxiety trend
-  const anxietyPointsStr = points.map((p: any, idx: number) => `${mapX(idx)},${mapY(p.anxietyScore)}`).join(" ");
+  const dataPoints = points
+    .map((p: { anxietyScore: number | null; hasData: boolean }, idx: number) => ({
+      ...p,
+      idx,
+      x: mapX(idx),
+      y: p.hasData && p.anxietyScore != null ? mapY(p.anxietyScore) : null,
+    }))
+    .filter((p: { hasData: boolean }) => p.hasData);
+
+  const lineSegments: string[] = [];
+  for (let i = 1; i < dataPoints.length; i++) {
+    const prev = dataPoints[i - 1];
+    const curr = dataPoints[i];
+    if (prev.y != null && curr.y != null) {
+      lineSegments.push(`${prev.x},${prev.y} ${curr.x},${curr.y}`);
+    }
+  }
+
+  const areaPath =
+    dataPoints.length >= 2
+      ? `M ${dataPoints[0].x} ${chartHeight - 20} ` +
+        dataPoints.map((p: { x: number; y: number | null }) => `L ${p.x} ${p.y}`).join(" ") +
+        ` L ${dataPoints[dataPoints.length - 1].x} ${chartHeight - 20} Z`
+      : "";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-slate-900/10 selection:text-slate-900 flex flex-col font-sans">
@@ -323,80 +422,86 @@ export default function DashboardPage() {
                   <Activity className="w-4.5 h-4.5 text-slate-700" />
                   Weekly Progress Baseline Trends
                 </h3>
-                <p className="text-[10px] text-slate-500">Dynamic tracking of subjective anxiety metrics.</p>
+                <p className="text-[10px] text-slate-500">
+                  {hasWeeklyData
+                    ? "From your daily reflection logs."
+                    : "Complete reflections to populate this chart."}
+                </p>
               </div>
               <span className="text-[9px] font-extrabold bg-slate-100 px-2.5 py-1 rounded-full text-slate-800">
                 Pacing Line (Anxiety Score)
               </span>
             </div>
 
-            {/* Inline SVG Chart */}
             <div className="relative w-full h-[150px] bg-slate-50 border border-slate-100 rounded-2xl p-2.5 flex items-center justify-center">
-              <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
-                <defs>
-                  {/* Chart Line Gradient */}
-                  <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#0f172a" stopOpacity="0.1" />
-                    <stop offset="100%" stopColor="#0f172a" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
+              {!hasWeeklyData ? (
+                <div className="text-center px-6 space-y-1">
+                  <Activity className="w-6 h-6 text-slate-300 mx-auto" />
+                  <p className="text-[11px] font-bold text-slate-600">No reflection data yet</p>
+                  <p className="text-[9px] text-slate-400">
+                    Finish daily activities and submit your end-of-day reflection to see real baseline trends.
+                  </p>
+                </div>
+              ) : (
+                <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
+                  <defs>
+                    <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#0f172a" stopOpacity="0.1" />
+                      <stop offset="100%" stopColor="#0f172a" stopOpacity="0.0" />
+                    </linearGradient>
+                  </defs>
 
-                {/* Horizontal Guide Lines */}
-                <line x1="30" y1={mapY(1)} x2={chartWidth - 30} y2={mapY(1)} stroke="#e2e8f0" strokeDasharray="3" strokeWidth="0.8" />
-                <line x1="30" y1={mapY(5)} x2={chartWidth - 30} y2={mapY(5)} stroke="#e2e8f0" strokeDasharray="3" strokeWidth="0.8" />
-                <line x1="30" y1={mapY(10)} x2={chartWidth - 30} y2={mapY(10)} stroke="#e2e8f0" strokeDasharray="3" strokeWidth="0.8" />
+                  <line x1="30" y1={mapY(1)} x2={chartWidth - 30} y2={mapY(1)} stroke="#e2e8f0" strokeDasharray="3" strokeWidth="0.8" />
+                  <line x1="30" y1={mapY(5)} x2={chartWidth - 30} y2={mapY(5)} stroke="#e2e8f0" strokeDasharray="3" strokeWidth="0.8" />
+                  <line x1="30" y1={mapY(10)} x2={chartWidth - 30} y2={mapY(10)} stroke="#e2e8f0" strokeDasharray="3" strokeWidth="0.8" />
 
-                {/* Area Gradient under curve */}
-                <path
-                  d={`M 30 ${chartHeight - 20} L ${anxietyPointsStr} L ${mapX(points.length - 1)} ${chartHeight - 20} Z`}
-                  fill="url(#chart-grad)"
-                />
+                  {areaPath && <path d={areaPath} fill="url(#chart-grad)" />}
 
-                {/* Main Anxiety Line */}
-                <polyline
-                  fill="none"
-                  stroke="#0f172a"
-                  strokeWidth="2.2"
-                  points={anxietyPointsStr}
-                  strokeLinecap="round"
-                />
-
-                {/* Circles over Points */}
-                {points.map((p: any, idx: number) => (
-                  <g key={idx} className="group">
-                    <circle
-                      cx={mapX(idx)}
-                      cy={mapY(p.anxietyScore)}
-                      r="4"
-                      fill="#ffffff"
+                  {lineSegments.map((segment, i) => (
+                    <polyline
+                      key={i}
+                      fill="none"
                       stroke="#0f172a"
-                      strokeWidth="2.5"
+                      strokeWidth="2.2"
+                      points={segment}
+                      strokeLinecap="round"
                     />
-                    {/* Tooltip label (invisible by default, visible on hover) */}
-                    <text
-                      x={mapX(idx)}
-                      y={mapY(p.anxietyScore) - 10}
-                      textAnchor="middle"
-                      className="text-[9px] font-black fill-slate-900 bg-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                    >
-                      {p.anxietyScore}
-                    </text>
-                  </g>
-                ))}
+                  ))}
 
-                {/* Weekday Labels */}
-                {points.map((p: any, idx: number) => (
-                  <text
-                    key={idx}
-                    x={mapX(idx)}
-                    y={chartHeight - 3}
-                    textAnchor="middle"
-                    className="text-[8px] font-bold fill-slate-400"
-                  >
-                    {p.dayName}
-                  </text>
-                ))}
-              </svg>
+                  {dataPoints.map((p: { idx: number; anxietyScore: number | null; x: number; y: number | null }) => (
+                    <g key={p.idx} className="group">
+                      <circle
+                        cx={p.x}
+                        cy={p.y!}
+                        r="4"
+                        fill="#ffffff"
+                        stroke="#0f172a"
+                        strokeWidth="2.5"
+                      />
+                      <text
+                        x={p.x}
+                        y={p.y! - 10}
+                        textAnchor="middle"
+                        className="text-[9px] font-black fill-slate-900 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                      >
+                        {p.anxietyScore}
+                      </text>
+                    </g>
+                  ))}
+
+                  {points.map((p: { dayName: string }, idx: number) => (
+                    <text
+                      key={idx}
+                      x={mapX(idx)}
+                      y={chartHeight - 3}
+                      textAnchor="middle"
+                      className="text-[8px] font-bold fill-slate-400"
+                    >
+                      {p.dayName}
+                    </text>
+                  ))}
+                </svg>
+              )}
             </div>
           </GlassCard>
 
@@ -454,6 +559,37 @@ export default function DashboardPage() {
 
         </div>
 
+        {/* Cohort Pod Group Chat */}
+        <div className="grid md:grid-cols-3 gap-8">
+          <div className="md:col-span-2">
+            <PodChat pod={data.pod} />
+          </div>
+          <GlassCard className="p-6 shadow-md bg-white border border-slate-200/60 space-y-4">
+            <h3 className="text-sm font-bold text-slate-900">Your Cohort Pod</h3>
+            {data.pod ? (
+              <>
+                <p className="text-[10px] text-slate-500 leading-relaxed">
+                  You are in <strong>Pod #{data.pod.podNumber}</strong> with {data.pod.memberCount} member{data.pod.memberCount !== 1 ? "s" : ""} focused on {data.pod.focusArea}.
+                </p>
+                <div className="space-y-2">
+                  {data.pod.members.map((m: { id: string; displayName: string; activeToday: boolean; isCurrentUser: boolean }) => (
+                    <div key={m.id} className="flex items-center justify-between text-xs">
+                      <span className={`font-semibold ${m.isCurrentUser ? "text-slate-900" : "text-slate-600"}`}>
+                        {m.displayName}{m.isCurrentUser ? " (You)" : ""}
+                      </span>
+                      <span className={`text-[9px] font-bold ${m.activeToday ? "text-emerald-600" : "text-slate-400"}`}>
+                        {m.activeToday ? "Active" : "—"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p className="text-[10px] text-slate-500">Finish onboarding to be matched into a pod of 2–5 peers.</p>
+            )}
+          </GlassCard>
+        </div>
+
         {/* Activities Checklist & Achievements */}
         <div className="grid md:grid-cols-3 gap-8">
           
@@ -475,24 +611,28 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={act.id}
-                    className={`p-4 rounded-2xl border transition-all flex items-center justify-between text-xs cursor-pointer ${
+                    className={`p-4 rounded-2xl border transition-all flex items-center justify-between text-xs gap-3 ${
                       isCompleted 
                         ? "bg-slate-50 border-slate-250 opacity-70" 
                         : "bg-white border-slate-200/70 hover:border-slate-350"
                     }`}
-                    onClick={() => toggleActivity(act.id, !isCompleted)}
                   >
-                    <div className="flex items-start gap-3 flex-1 pr-4">
-                      <div className={`w-5.5 h-5.5 rounded-full border flex items-center justify-center transition-all shrink-0 mt-0.5 ${
-                        isCompleted 
-                          ? "border-slate-800 bg-slate-900 text-white" 
-                          : "border-slate-300 bg-transparent"
-                      }`}>
+                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => toggleActivity(act.id, !isCompleted)}
+                        className={`w-5.5 h-5.5 rounded-full border flex items-center justify-center transition-all shrink-0 mt-0.5 cursor-pointer ${
+                          isCompleted 
+                            ? "border-slate-800 bg-slate-900 text-white" 
+                            : "border-slate-300 bg-transparent hover:border-slate-500"
+                        }`}
+                        aria-label={isCompleted ? "Mark incomplete" : "Mark complete"}
+                      >
                         {isCompleted && (
                           <div className="w-1.5 h-1.5 rounded-full bg-white" />
                         )}
-                      </div>
-                      <div className="space-y-0.5 text-left">
+                      </button>
+                      <div className="space-y-0.5 text-left min-w-0">
                         <span className={`font-bold block text-slate-800 ${isCompleted ? "line-through text-slate-400" : ""}`}>
                           {act.name}
                         </span>
@@ -503,10 +643,20 @@ export default function DashboardPage() {
                         )}
                       </div>
                     </div>
-                    
-                    <span className="px-2.5 py-1 rounded-full bg-slate-100 text-[8px] font-bold uppercase tracking-wider text-slate-500">
-                      {act.type}
-                    </span>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => openActivityDetail(act)}
+                        className="px-2.5 py-1.5 rounded-full bg-slate-900 hover:bg-slate-800 text-white text-[8px] font-bold uppercase tracking-wider flex items-center gap-1 cursor-pointer transition-colors"
+                      >
+                        <Info className="w-3 h-3" />
+                        Detail
+                      </button>
+                      <span className="px-2.5 py-1 rounded-full bg-slate-100 text-[8px] font-bold uppercase tracking-wider text-slate-500">
+                        {act.type}
+                      </span>
+                    </div>
                   </div>
                 );
               })}
@@ -646,6 +796,17 @@ export default function DashboardPage() {
         )}
 
       </main>
+
+      {detailActivity && (
+        <ActivityDetailModal
+          key={detailActivity.id}
+          activity={detailActivity}
+          detail={detailForActivityId === detailActivity.id ? activityDetail : null}
+          loading={activityDetailLoading || detailForActivityId !== detailActivity.id}
+          error={activityDetailError}
+          onClose={closeActivityDetail}
+        />
+      )}
 
       {/* Daily Reflection Wizard Modal */}
       {reflectionOpen && (

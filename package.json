@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:check": "node scripts/check-db.js",
+    "db:setup-indexes": "node scripts/setup-indexes.js"
   },
   "dependencies": {
     "@ai-sdk/google": "^3.0.80",

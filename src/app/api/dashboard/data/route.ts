@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUserObjectId } from "@/lib/auth";
 import { getCalmPulseDb } from "@/lib/mongodb";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { ensureUserPod, getPodSummary } from "@/lib/pods";
 
 export const runtime = "nodejs";
 
@@ -102,11 +103,14 @@ export async function GET(req: Request) {
       );
     }
 
-    // 3. Build Baseline Changes Timeline & Weekly Progress Chart Data
-    // We want a list of 7 days. If the user doesn't have logs yet, we mock a progression
-    // based on their intake anxiety baseline so the graph loads beautifully.
-    const initialAnxiety = user.calculatedReport?.anxietyScore || 7.0;
-    const weeklyProgress: Array<{ dayName: string; anxietyScore: number; sleepQuality: number }> = [];
+    // 3. Build Weekly Progress Chart from real dailyLogs only
+    const weeklyProgress: Array<{
+      dayName: string;
+      date: string;
+      anxietyScore: number | null;
+      sleepQuality: number | null;
+      hasData: boolean;
+    }> = [];
     const logs = user.dailyLogs || [];
 
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -116,26 +120,38 @@ export async function GET(req: Request) {
       const d = new Date();
       d.setDate(now.getDate() - i);
       const dStr = d.toISOString().split("T")[0];
-      const matchingLog = logs.find((l: any) => l.date && new Date(l.date).toISOString().startsWith(dStr));
-
-      let score = initialAnxiety;
-      let sleep = 6.5;
+      const matchingLog = logs.find((l: { date?: Date | string }) =>
+        l.date && new Date(l.date).toISOString().startsWith(dStr)
+      );
 
       if (matchingLog) {
-        score = matchingLog.baselineScore || matchingLog.anxiety || initialAnxiety;
-        sleep = matchingLog.sleep || 7.0;
+        const score = matchingLog.baselineScore ?? matchingLog.anxiety ?? null;
+        const sleep = matchingLog.sleep ?? null;
+        weeklyProgress.push({
+          dayName: weekdays[d.getDay()],
+          date: dStr,
+          anxietyScore: score != null ? parseFloat(Number(score).toFixed(1)) : null,
+          sleepQuality: sleep != null ? parseFloat(Number(sleep).toFixed(1)) : null,
+          hasData: score != null,
+        });
       } else {
-        // Mock a natural pacing descent if no log for that day yet
-        const decay = (6 - i) * 0.25;
-        score = Math.max(initialAnxiety - decay, 3.5);
-        sleep = Math.min(6.0 + decay * 0.5, 9.0);
+        weeklyProgress.push({
+          dayName: weekdays[d.getDay()],
+          date: dStr,
+          anxietyScore: null,
+          sleepQuality: null,
+          hasData: false,
+        });
       }
+    }
 
-      weeklyProgress.push({
-        dayName: weekdays[d.getDay()],
-        anxietyScore: parseFloat(score.toFixed(1)),
-        sleepQuality: parseFloat(sleep.toFixed(1))
-      });
+    const weeklyDataPointCount = weeklyProgress.filter((p) => p.hasData).length;
+
+    // 3b. Load real cohort pod data
+    let pod = null;
+    const podObjectId = await ensureUserPod(db, userId);
+    if (podObjectId) {
+      pod = await getPodSummary(db, podObjectId, userId);
     }
 
     // 4. Seeding Default Achievements
@@ -168,6 +184,8 @@ export async function GET(req: Request) {
         activities: activitiesList,
         completedActivities: completedList,
         weeklyProgress,
+        weeklyDataPointCount,
+        pod,
         achievements,
         insights,
         redFlags,

@@ -21,6 +21,7 @@ export default function PodSyncScheduling({ cohortId, onSubmit, onBack }: PodSyn
   });
 
   const handleTimeChange = (type: keyof SyncTimes, value: string) => {
+    if (!value) return;
     setSyncTimes((prev) => ({
       ...prev,
       [type]: value
@@ -59,13 +60,13 @@ export default function PodSyncScheduling({ cohortId, onSubmit, onBack }: PodSyn
             <p className="text-xs text-slate-500 leading-relaxed">
               Verify your physical baseline when waking up. Your pod mates will check in around the same time.
             </p>
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs w-full max-w-[150px]">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs w-fit min-w-[170px]">
               <span className="text-[10px] text-slate-400 font-bold uppercase">TIME:</span>
               <input
                 type="time"
                 value={syncTimes.morning}
                 onChange={(e) => handleTimeChange("morning", e.target.value)}
-                className="bg-transparent border-0 p-0 text-xs font-extrabold text-slate-800 focus:ring-0 focus:outline-none w-14"
+                className="bg-transparent border-0 p-0 text-xs font-extrabold text-slate-800 focus:ring-0 focus:outline-none w-24"
               />
             </div>
           </div>
@@ -79,13 +80,13 @@ export default function PodSyncScheduling({ cohortId, onSubmit, onBack }: PodSyn
             <p className="text-xs text-slate-500 leading-relaxed">
               Log your daily habit compliance and reflect on somatic fluctuations before starting screen detach schedules.
             </p>
-            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs w-full max-w-[150px]">
+            <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-2 rounded-xl text-xs w-fit min-w-[170px]">
               <span className="text-[10px] text-slate-400 font-bold uppercase">TIME:</span>
               <input
                 type="time"
                 value={syncTimes.evening}
                 onChange={(e) => handleTimeChange("evening", e.target.value)}
-                className="bg-transparent border-0 p-0 text-xs font-extrabold text-slate-800 focus:ring-0 focus:outline-none w-14"
+                className="bg-transparent border-0 p-0 text-xs font-extrabold text-slate-800 focus:ring-0 focus:outline-none w-24"
               />
             </div>
           </div>

@@ -5,16 +5,31 @@ import { applyRateLimit } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
-const FALLBACK_REPORTS: Record<string, any> = {
+interface BaselineReport {
+  anxietyScore: number;
+  subtype: string;
+  symptoms: string[];
+  pacingRate: string;
+  adjustments: Array<{
+    name: string;
+    type: string;
+    trigger: string;
+    description: string;
+  }>;
+  cohortId: number;
+  cohortDescription: string;
+}
+
+const FALLBACK_REPORTS: Record<string, BaselineReport> = {
   "Social & Performance Anxiety": {
     anxietyScore: 7.4,
     subtype: "Social & Performance Anxiety",
     symptoms: ["Performance Anticipation", "Autonomic Spikes (Racing Heart)", "Shoulder Tension", "Post-Event Cognitive Rumination"],
     pacingRate: "40% Decelerated",
     adjustments: [
-      { name: "Pre-Event Screen Buffer", type: "Digital", trigger: "Turn off screens 30m prior to social events" },
-      { name: "Cognitive Grounding Guidance", type: "Auditory", trigger: "Listen to 5m grounding session post-event" },
-      { name: "Adrenaline Restrict (Caffeine)", type: "Dietary", trigger: "Zero caffeine intake 4 hours before speech/event" }
+      { name: "Pre-Event Screen Buffer", type: "Digital", trigger: "Turn off screens 30m prior to social events", description: "Calms your nervous system to prevent racing heart before socializing." },
+      { name: "Cognitive Grounding Guidance", type: "Auditory", trigger: "Listen to 5m grounding session post-event", description: "Stops repetitive thoughts and calms your mind after events." },
+      { name: "Adrenaline Restrict (Caffeine)", type: "Dietary", trigger: "Zero caffeine intake 4 hours before speech/event", description: "Prevents caffeine from triggering physical anxiety symptoms like shaking." }
     ],
     cohortId: 42,
     cohortDescription: "Social and Performance anxiety cohort pod. Focuses on pre-event breathing buffers and post-event cognitive declutter milestones."
@@ -25,9 +40,9 @@ const FALLBACK_REPORTS: Record<string, any> = {
     symptoms: ["Somatic Restlessness", "Breathing dysregulation (Shallow)", "Jaw Clenching", "Sudden Panic Waves"],
     pacingRate: "50% Decelerated",
     adjustments: [
-      { name: "Breathing Pacer (4-7-8)", type: "Somatic", trigger: "Trigger breathing break automatically every 3 hours" },
-      { name: "Cold Sensory Grounding", type: "Sensory", trigger: "Apply cold water or ice pack on panic spike warnings" },
-      { name: "Autonomic Pacing Breaks", type: "Interval", trigger: "Take 5m screen-free rest every 60m of continuous activity" }
+      { name: "Breathing Pacer (4-7-8)", type: "Somatic", trigger: "Trigger breathing break automatically every 3 hours", description: "Slows your breathing to signal safety to your body." },
+      { name: "Cold Sensory Grounding", type: "Sensory", trigger: "Apply cold water or ice pack on panic spike warnings", description: "Instantly slows down a racing heart with a cold splash." },
+      { name: "Autonomic Pacing Breaks", type: "Interval", trigger: "Take 5m screen-free rest every 60m of continuous activity", description: "Relieves muscle tension and stops stress from building up." }
     ],
     cohortId: 108,
     cohortDescription: "Generalized tension pod. Focusing on autonomic regulation, physical grounding checks, and panic cooldown workflows."
@@ -38,9 +53,9 @@ const FALLBACK_REPORTS: Record<string, any> = {
     symptoms: ["Cognitive Fatigue", "Attention Exhaustion", "Screen Aversion", "Pre-Sleep Restlessness"],
     pacingRate: "30% Decelerated",
     adjustments: [
-      { name: "Digital Detach (9:30 PM)", type: "Digital", trigger: "Disable all digital communications at 9:30 PM" },
-      { name: "Focus-Rest Interval (50-10)", type: "Workflow", trigger: "Strict 10m off-screen transition every 50m of work" },
-      { name: "Physical Re-activation Stretch", type: "Physical", trigger: "Do a 5m full body stretch routine at 2:00 PM" }
+      { name: "Digital Detach (9:30 PM)", type: "Digital", trigger: "Disable all digital communications at 9:30 PM", description: "Gives your brain a screen break to help you sleep." },
+      { name: "Focus-Rest Interval (50-10)", type: "Workflow", trigger: "Strict 10m off-screen transition every 50m of work", description: "Prevents brain fatigue by enforcing regular, short screen rests." },
+      { name: "Physical Re-activation Stretch", type: "Physical", trigger: "Do a 5m full body stretch routine at 2:00 PM", description: "Gets blood flowing to shake off mid-afternoon fatigue." }
     ],
     cohortId: 89,
     cohortDescription: "Burnout Recovery cohort pod. Targeting screen-free work transitions and evening digital boundary schedules."
@@ -53,8 +68,8 @@ const DEFAULT_REPORT = {
   symptoms: ["Mental Fatigue", "Muscle Tension", "Stress Response"],
   pacingRate: "35% Decelerated",
   adjustments: [
-    { name: "Mindful Pacing Pause", type: "Somatic", trigger: "Take a 5m breathing pause every 3 hours" },
-    { name: "Evening Digital Boundary", type: "Digital", trigger: "Disconnect screens 60m before sleeping" }
+    { name: "Mindful Pacing Pause", type: "Somatic", trigger: "Take a 5m breathing pause every 3 hours", description: "Lets you check in with your body to keep stress low." },
+    { name: "Evening Digital Boundary", type: "Digital", trigger: "Disconnect screens 60m before sleeping", description: "Prepares your brain for sleep by keeping screens away." }
   ],
   cohortId: 15,
   cohortDescription: "General behavioral pacing and stress management pod."
@@ -112,7 +127,11 @@ Calculate the following parameters:
 2. subtype: The matched anxiety subtype (use "${focusArea}").
 3. symptoms: A list of 4 key cognitive/somatic symptoms identified from their responses.
 4. pacingRate: A percentage decelerated pacing target (e.g., "45% Decelerated").
-5. adjustments: An array of 3 custom behavioral habit adjustments matching the CalmPulse pacing guidelines for this subtype. Each adjustment should have a "name", "type" (e.g., Somatic, Digital, Workflow, Dietary), and a "trigger" (the explicit condition or schedule to perform it).
+5. adjustments: An array of 3 custom behavioral habit adjustments matching the CalmPulse pacing guidelines for this subtype. Each adjustment should have:
+   - "name": the habit name.
+   - "type": the type (e.g., Somatic, Digital, Workflow, Dietary).
+   - "trigger": the explicit schedule/condition (e.g. "Splash cold water on face upon sensing panic").
+   - "description": a short explanation in simple, easy-to-understand words (max 12 words) of how it physically calms the body or helps the nervous system.
 6. cohortId: A random integer between 10 and 150.
 7. cohortDescription: A 2-sentence description of an anonymous cohort group of 5-8 peers facing similar symptoms and pacing goals.
 
@@ -124,7 +143,7 @@ Example format:
   "symptoms": ["Somatic restlessness", "Jaw clenching"],
   "pacingRate": "45% Decelerated",
   "adjustments": [
-    { "name": "Breathing break", "type": "Somatic", "trigger": "Triggered every 3 hours" }
+    { "name": "Breathing break", "type": "Somatic", "trigger": "Triggered every 3 hours", "description": "Slows breathing to calm body." }
   ],
   "cohortId": 42,
   "cohortDescription": "Cohort description here."
@@ -157,10 +176,11 @@ Example format:
       report,
       mode: "ai"
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in baseline API:", error);
+    const errMsg = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
-      { error: "Internal Server Error", details: error.message },
+      { error: "Internal Server Error", details: errMsg },
       { status: 500 }
     );
   }

@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { assignUserToPod } from "@/lib/pods";
 
 export const runtime = "nodejs";
 
@@ -178,10 +179,15 @@ export async function POST(req: Request) {
       }
     }
 
-    const result = await db.collection("users").updateOne(
+    await db.collection("users").updateOne(
       { _id: oId },
       { $set: updateDoc }
     );
+
+    if (onboardingComplete === true) {
+      const focusArea = user.focusArea || "General";
+      await assignUserToPod(db, oId, focusArea);
+    }
 
     return NextResponse.json({
       message: "Profile updated successfully",

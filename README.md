@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CalmPulse
 
-## Getting Started
+Next.js app for anxiety pacing, cohort pods, and daily reflection tracking.
 
-First, run the development server:
+## MongoDB Atlas setup
+
+CalmPulse uses MongoDB for users, pods, messages, and daily logs. It works with **local MongoDB** or **MongoDB Atlas**.
+
+### 1. Create an Atlas cluster
+
+1. Sign up at [MongoDB Atlas](https://cloud.mongodb.com)
+2. Create a free M0 cluster
+3. **Database Access** → add a database user (username + password)
+4. **Network Access** → add your IP (use `0.0.0.0/0` only for local dev)
+
+### 2. Configure environment variables
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Edit `.env.local`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```env
+MONGODB_URI=mongodb+srv://USER:PASSWORD@CLUSTER.mongodb.net/calmpulse?retryWrites=true&w=majority
+MONGODB_DB=calmpulse
+JWT_SECRET=your-long-random-secret
+GROQ_API_KEY=your-groq-key
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Replace `USER`, `PASSWORD`, and `CLUSTER` with your Atlas values. URL-encode special characters in passwords.
 
-## Learn More
+If your Atlas URI has no database name in the path (ends with `mongodb.net/?retryWrites=...`), set `MONGODB_DB` explicitly.
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Verify the connection
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run db:check
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 4. Create indexes (recommended for Atlas)
 
-## Deploy on Vercel
+```bash
+npm run db:setup-indexes
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Local MongoDB (alternative)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```env
+MONGODB_URI=mongodb://127.0.0.1:27017/calmpulse
+```
+
+## Getting started
+
+```bash
+npm install
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+## Deploying (Vercel + Atlas)
+
+Add these environment variables in your hosting provider:
+
+| Variable | Required |
+|----------|----------|
+| `MONGODB_URI` | Yes |
+| `MONGODB_DB` | Yes (if not in URI path) |
+| `JWT_SECRET` | Yes |
+| `GROQ_API_KEY` | Optional (AI features) |
+
+Run `npm run db:setup-indexes` once against your Atlas database before going live.
+
+## CI/CD (GitHub Actions → GHCR → EC2)
+
+On every push to `main`, GitHub Actions:
+
+1. Builds the Docker image
+2. Pushes to `ghcr.io/yeabalex/calmpulse:latest`
+3. SSHs into EC2, pulls the image, and restarts the container
+
+### One-time EC2 setup
+
+```bash
+# Install Docker
+sudo apt update && sudo apt install -y docker.io
+sudo usermod -aG docker $USER
+# log out and back in
+
+# App env file (never commit this)
+sudo mkdir -p /opt/calmpulse
+sudo cp deploy/ec2.env.example /opt/calmpulse/.env
+sudo nano /opt/calmpulse/.env
+```
+
+### GitHub repository secrets
+
+| Secret | Description |
+|--------|-------------|
+| `EC2_HOST` | EC2 public IP or DNS |
+| `EC2_USER` | SSH user (`ubuntu` for Ubuntu AMI) |
+| `EC2_SSH_PRIVATE_KEY` | Contents of your `.pem` key pair from AWS |
+| `GHCR_PULL_TOKEN` | GitHub PAT with `read:packages` (for EC2 to pull the image) |
+
+`GITHUB_TOKEN` is provided automatically for pushing to GHCR.
+
+To create `GHCR_PULL_TOKEN`: GitHub → Settings → Developer settings → Personal access tokens → `read:packages`.
+
+### Manual deploy on EC2
+
+```bash
+export IMAGE=ghcr.io/yeabalex/calmpulse:latest
+export GHCR_USERNAME=your-github-username
+export GHCR_TOKEN=your-pat-with-read-packages
+bash scripts/ec2-deploy.sh
+```
