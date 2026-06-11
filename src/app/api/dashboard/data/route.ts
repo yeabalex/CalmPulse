@@ -189,7 +189,21 @@ export async function GET(req: Request) {
         achievements,
         insights,
         redFlags,
-        report: user.calculatedReport || null
+        report: user.calculatedReport || null,
+        historyLogs: (user.dailyLogs || []).map((log: any, index: number) => {
+          const dateObj = new Date(log.date);
+          const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric' } as const;
+          const formattedDate = dateObj.toLocaleDateString('en-US', options);
+          return {
+            id: `hist_${index}_${dateObj.getTime()}`,
+            date: formattedDate,
+            anxietyScore: log.baselineScore ?? log.anxiety ?? 6.8,
+            ventText: log.ventText || "Logged daily reflection.",
+            completedCount: log.completedCount ?? 3,
+            totalCount: user.activities?.length || 3,
+            completedHabits: user.activities?.slice(0, log.completedCount ?? 3).map((a: any) => a.name) || []
+          };
+        }).reverse()
       }
     });
   } catch (error: any) {

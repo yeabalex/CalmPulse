@@ -347,11 +347,28 @@ export default function DashboardPage() {
   const submitReflection = async () => {
     setSubmittingReflection(true);
 
+    let estimatedAnxiety = 5.0;
+    const lowerVent = ventText.toLowerCase();
+    if (lowerVent.includes("panic") || lowerVent.includes("severe") || lowerVent.includes("extreme") || lowerVent.includes("tightness") || lowerVent.includes("tight")) {
+      estimatedAnxiety = 8.5;
+    } else if (lowerVent.includes("anxious") || lowerVent.includes("stressed") || lowerVent.includes("overwhelmed") || lowerVent.includes("tension") || lowerVent.includes("spike")) {
+      estimatedAnxiety = 7.0;
+    } else if (lowerVent.includes("calm") || lowerVent.includes("relaxed") || lowerVent.includes("better") || lowerVent.includes("good")) {
+      estimatedAnxiety = 3.5;
+    }
+
+    const finalRatings = {
+      mood: estimatedAnxiety > 7 ? 5 : 7,
+      energy: estimatedAnxiety > 7 ? 4 : 6,
+      anxiety: estimatedAnxiety,
+      sleep: estimatedAnxiety > 7 ? 5.5 : 7.5
+    };
+
     const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
     if (isDemo) {
       setTimeout(() => {
         const updatedProgress = [...data.weeklyProgress];
-        const newScore = parseFloat(ratings.anxiety.toFixed(1));
+        const newScore = parseFloat(estimatedAnxiety.toFixed(1));
         updatedProgress[5] = { dayName: "Sat", anxietyScore: newScore, hasData: true };
 
         const newHistoryEntry: HistoryEntry = {
@@ -397,10 +414,10 @@ export default function DashboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mood: ratings.mood,
-          energy: ratings.energy,
-          anxiety: ratings.anxiety,
-          sleep: ratings.sleep,
+          mood: finalRatings.mood,
+          energy: finalRatings.energy,
+          anxiety: finalRatings.anxiety,
+          sleep: finalRatings.sleep,
           ventText,
           clarifyingAnswers: answers
         }),
@@ -1139,101 +1156,18 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <div className="space-y-0.5">
                 <h3 className="text-base font-bold text-slate-900 font-display">Daily Reflection</h3>
-                <p className="text-[10px] text-slate-400">Step {reflectionStep} of 3</p>
+                <p className="text-[10px] text-slate-400">Step {reflectionStep} of 2</p>
               </div>
               <button
                 onClick={() => setReflectionOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold cursor-pointer"
+                className="text-slate-400 hover:text-slate-650 text-sm font-bold cursor-pointer"
               >
                 Close
               </button>
             </div>
 
-            {/* Slide 1: Rating Sliders */}
+            {/* Slide 1: Venting Textarea */}
             {reflectionStep === 1 && (
-              <div className="space-y-5">
-                <span className="text-xs font-bold text-slate-700 block">Assess today&apos;s vital indicators (1 to 10):</span>
-                
-                <div className="space-y-3">
-                  {/* Mood Rating */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold text-slate-800">
-                      <span>Mood Level:</span>
-                      <span>{ratings.mood} / 10</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      value={ratings.mood}
-                      onChange={(e) => setRatings({ ...ratings, mood: parseInt(e.target.value) })}
-                      className="w-full accent-slate-900 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  {/* Energy Rating */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold text-slate-800">
-                      <span>Energy Level:</span>
-                      <span>{ratings.energy} / 10</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      value={ratings.energy}
-                      onChange={(e) => setRatings({ ...ratings, energy: parseInt(e.target.value) })}
-                      className="w-full accent-slate-900 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  {/* Anxiety Rating */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold text-slate-800">
-                      <span>Anxiety / Stress Score:</span>
-                      <span>{ratings.anxiety} / 10</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="10"
-                      value={ratings.anxiety}
-                      onChange={(e) => setRatings({ ...ratings, anxiety: parseInt(e.target.value) })}
-                      className="w-full accent-slate-900 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-
-                  {/* Sleep Rating */}
-                  <div className="space-y-1.5">
-                    <div className="flex justify-between text-xs font-bold text-slate-800">
-                      <span>Sleep Quality Duration:</span>
-                      <span>{ratings.sleep} hours</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="1"
-                      max="12"
-                      value={ratings.sleep}
-                      onChange={(e) => setRatings({ ...ratings, sleep: parseInt(e.target.value) })}
-                      className="w-full accent-slate-900 h-1 bg-slate-100 rounded-lg appearance-none cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-4 border-t border-slate-100">
-                  <button
-                    onClick={() => setReflectionStep(2)}
-                    className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 cursor-pointer"
-                  >
-                    Next Step
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Slide 2: Venting Textarea */}
-            {reflectionStep === 2 && (
               <div className="space-y-5">
                 <div>
                   <span className="text-xs font-bold text-slate-700 block">Expressive Log & Venting:</span>
@@ -1250,15 +1184,14 @@ export default function DashboardPage() {
 
                 <div className="flex justify-between pt-4 border-t border-slate-100">
                   <button
-                    onClick={() => setReflectionStep(1)}
+                    onClick={() => setReflectionOpen(false)}
                     className="px-6 py-3 border border-slate-250 hover:bg-slate-50 rounded-xl font-bold text-xs cursor-pointer"
                   >
-                    Back
+                    Cancel
                   </button>
                   <button
                     onClick={async () => {
-                      await startReflection(); // loads AI questions
-                      setReflectionStep(3);
+                      setReflectionStep(2);
                     }}
                     disabled={!ventText.trim()}
                     className={`px-6 py-3 rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm ${
@@ -1267,15 +1200,15 @@ export default function DashboardPage() {
                         : "bg-slate-100 text-slate-400 cursor-not-allowed"
                     }`}
                   >
-                    Analyze & Generate QA
+                    Next Step
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Slide 3: AI Clarifying Questions */}
-            {reflectionStep === 3 && (
+            {/* Slide 2: AI Clarifying Questions */}
+            {reflectionStep === 2 && (
               <div className="space-y-5">
                 {questionsLoading ? (
                   <div className="py-12 flex flex-col items-center justify-center gap-3">
@@ -1304,7 +1237,7 @@ export default function DashboardPage() {
 
                     <div className="flex justify-between pt-4 border-t border-slate-100">
                       <button
-                        onClick={() => setReflectionStep(2)}
+                        onClick={() => setReflectionStep(1)}
                         className="px-6 py-3 border border-slate-250 hover:bg-slate-50 rounded-xl font-bold text-xs cursor-pointer"
                       >
                         Back
