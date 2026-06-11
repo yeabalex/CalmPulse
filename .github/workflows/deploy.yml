@@ -63,7 +63,7 @@ jobs:
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GHCR_PULL_TOKEN }}
           CONTAINER_NAME: calmpulse
-          HOST_PORT: "3000"
+          HOST_PORT: "3001"
           ENV_FILE: /opt/calmpulse/.env
           MONGODB_URI: ${{ secrets.MONGODB_URI }}
           MONGODB_DB: ${{ secrets.MONGODB_DB }}
