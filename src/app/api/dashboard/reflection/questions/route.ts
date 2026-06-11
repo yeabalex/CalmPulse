@@ -4,6 +4,7 @@ import { getCalmPulseDb } from "@/lib/mongodb";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { getGroqApiKey } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -35,7 +36,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
+    const apiKey = getGroqApiKey();
     if (!apiKey) {
       // Mock questions if no API key is present
       return NextResponse.json({ questions: DEFAULT_QUESTIONS, mode: "mock" });

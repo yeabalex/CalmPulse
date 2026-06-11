@@ -4,6 +4,7 @@ import { ObjectId } from "mongodb";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { getGroqApiKey } from "@/lib/ai";
 import { assignUserToPod } from "@/lib/pods";
 
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ async function generateInitialActivities(
   report: any,
   ventText: string
 ): Promise<Array<{ id: string; name: string; type: string; description: string; enabled: boolean; source: string }>> {
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = getGroqApiKey();
 
   if (!apiKey) {
     // Heuristic fallbacks customized by Focus Area

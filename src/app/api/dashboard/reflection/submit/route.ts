@@ -4,6 +4,7 @@ import { getCalmPulseDb } from "@/lib/mongodb";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { getGroqApiKey } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
     const priorLogs = user.dailyLogs ? user.dailyLogs.slice(-4) : [];
     const goal = user.goal || "Reduce Anxiety in 90 Days";
 
-    const apiKey = process.env.GROQ_API_KEY;
+    const apiKey = getGroqApiKey();
 
     let baselineScore = anxiety; // default fallback
     let aiInsights = "Your daily log has been saved. Try checking off more activities tomorrow to accelerate your pacing score!";

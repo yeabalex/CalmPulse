@@ -2,6 +2,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { getGroqApiKey } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -68,7 +69,7 @@ export async function POST(req: Request) {
     const { ventText } = await req.json();
     const cleanText = (ventText || "").trim().toLowerCase();
 
-    const apiKey = process.env.GROQ_API_KEY;
+    const apiKey = getGroqApiKey();
 
     // Use high-quality mock fallbacks if API key is missing
     if (!apiKey) {

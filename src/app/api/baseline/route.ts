@@ -2,6 +2,7 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { NextResponse } from "next/server";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { getGroqApiKey } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing focusArea" }, { status: 400 });
     }
 
-    const apiKey = process.env.GROQ_API_KEY;
+    const apiKey = getGroqApiKey();
 
     // Fallback to mock responses if API key is missing
     if (!apiKey) {

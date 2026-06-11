@@ -4,6 +4,7 @@ import { getCalmPulseDb } from "@/lib/mongodb";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { applyRateLimit } from "@/lib/rateLimit";
+import { getGroqApiKey } from "@/lib/ai";
 
 export const runtime = "nodejs";
 
@@ -110,7 +111,7 @@ export async function POST(req: Request) {
     }
 
     const fallback = buildFallbackDetail(activity);
-    const apiKey = process.env.GROQ_API_KEY;
+    const apiKey = getGroqApiKey();
 
     if (!apiKey) {
       return NextResponse.json({ detail: fallback, mode: "mock" });
