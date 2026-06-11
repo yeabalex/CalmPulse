@@ -924,6 +924,24 @@ export default function DashboardPage() {
                 );
               })}
             </div>
+
+            {/* If all habits are completed, show the Daily Reflection/Recalibrate button here too! */}
+            {completedActCount >= totalActCount && (
+              <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4 bg-emerald-50/50 p-4.5 rounded-2xl border border-emerald-200/50 animate-fade-in">
+                <div className="text-left space-y-0.5">
+                  <span className="text-xs font-bold text-emerald-800 block">All Pacing Habits Completed!</span>
+                  <span className="text-[10px] text-slate-500 block">You can now submit your daily reflection to recalibrate your baseline.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={startReflection}
+                  className="px-5 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-sm shrink-0"
+                >
+                  Complete Daily Reflection
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
           </GlassCard>
 
           {/* AI Insights & Coaching feedback */}
