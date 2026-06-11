@@ -1,14 +1,11 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { 
-  Zap, Activity, Heart, Flame, ShieldAlert, Award, 
-  Calendar, CheckCircle, Brain, Sparkles, LogOut, 
+  Heart, ShieldAlert, Award, CheckCircle, Brain, Sparkles, LogOut,
   ChevronRight, ArrowRight, Loader2, Play, Volume2, Download, Info
 } from "lucide-react";
 import GlassCard from "@/components/shared/GlassCard";
-import TensionDial from "@/components/shared/vitals/TensionDial";
 import CompanionChat from "@/components/dashboard/PodChat";
 import HistoryTab, { type HistoryEntry } from "@/components/dashboard/HistoryTab";
 import ActivityDetailModal, { type ActivityDetail } from "@/components/dashboard/ActivityDetailModal";
@@ -105,7 +102,6 @@ const INITIAL_DEMO_DATA = {
 };
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth({ redirectTo: "/login" });
   
   const [data, setData] = useState<any>(null);
@@ -118,7 +114,6 @@ export default function DashboardPage() {
   // Reflection Modal state
   const [reflectionOpen, setReflectionOpen] = useState(false);
   const [reflectionStep, setReflectionStep] = useState(1);
-  const [ratings, setRatings] = useState({ mood: 7, energy: 6, anxiety: 5, sleep: 7 });
   const [ventText, setVentText] = useState("");
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -453,50 +448,6 @@ export default function DashboardPage() {
   // Calculate completion percentage
   const totalActCount = data.activities?.length || 0;
   const completedActCount = data.completedActivities?.length || 0;
-  const activityRate = totalActCount > 0 ? Math.round((completedActCount / totalActCount) * 100) : 0;
-
-  // SVG Trend Chart Dimensions
-  const chartHeight = 120;
-  const chartWidth = 500;
-  const points = data.weeklyProgress || [];
-  const hasWeeklyData = (data.weeklyDataPointCount ?? 0) > 0;
-
-  const mapY = (score: number) => {
-    const minVal = 1;
-    const maxVal = 10;
-    const scale = (score - minVal) / (maxVal - minVal);
-    return chartHeight - 20 - scale * (chartHeight - 40);
-  };
-
-  const mapX = (index: number) => {
-    if (points.length <= 1) return chartWidth / 2;
-    return 30 + index * ((chartWidth - 60) / (points.length - 1));
-  };
-
-  const dataPoints = points
-    .map((p: { anxietyScore: number | null; hasData: boolean }, idx: number) => ({
-      ...p,
-      idx,
-      x: mapX(idx),
-      y: p.hasData && p.anxietyScore != null ? mapY(p.anxietyScore) : null,
-    }))
-    .filter((p: { hasData: boolean }) => p.hasData);
-
-  const lineSegments: string[] = [];
-  for (let i = 1; i < dataPoints.length; i++) {
-    const prev = dataPoints[i - 1];
-    const curr = dataPoints[i];
-    if (prev.y != null && curr.y != null) {
-      lineSegments.push(`${prev.x},${prev.y} ${curr.x},${curr.y}`);
-    }
-  }
-
-  const areaPath =
-    dataPoints.length >= 2
-      ? `M ${dataPoints[0].x} ${chartHeight - 20} ` +
-        dataPoints.map((p: { x: number; y: number | null }) => `L ${p.x} ${p.y}`).join(" ") +
-        ` L ${dataPoints[dataPoints.length - 1].x} ${chartHeight - 20} Z`
-      : "";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 selection:bg-slate-900/10 selection:text-slate-900 flex flex-col font-sans">
@@ -551,7 +502,7 @@ export default function DashboardPage() {
               <div className="p-3 bg-white/70 border border-violet-100/50 rounded-2xl space-y-1">
                 <span className="font-extrabold text-slate-850 block">2. Daily Reflection</span>
                 <span className="text-[10px] text-slate-500 block leading-relaxed">
-                  Completing your habits unlocks the **Daily Reflection**. Fill it out to see the stress dial and weekly chart update.
+                  Completing your habits makes the daily reflection available for a short end-of-day check-in.
                 </span>
               </div>
               <div className="p-3 bg-white/70 border border-violet-100/50 rounded-2xl space-y-1">
@@ -567,8 +518,8 @@ export default function DashboardPage() {
         {/* Dashboard Title & Premium Control Banner */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200/50 pb-4">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 leading-tight">Pacing Center</h1>
-            <p className="text-xs text-slate-500">Track and adapt your biological recovery program.</p>
+            <h1 className="text-2xl font-bold text-slate-900 leading-tight">Today</h1>
+            <p className="text-xs text-slate-500">Choose what would help right now.</p>
           </div>
 
           {/* Premium / Standard Tier Selector */}
@@ -648,231 +599,108 @@ export default function DashboardPage() {
         </div>
 
         {activeTab === "overview" && (
-          <>
-            {/* Biometrics Top Grid */}
-            <div className="grid md:grid-cols-4 gap-6">
-          
-          {/* Widget 1: Day Counter */}
-          <GlassCard className="p-6 shadow-sm flex flex-col justify-between h-[180px] bg-white border border-slate-200/60">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Goal Timeline</span>
-              <Calendar className="w-4.5 h-4.5 text-slate-400" />
-            </div>
-            <div>
-              <span className="text-[9px] font-bold text-slate-500 block leading-tight">ACTIVE PLAN</span>
-              <span className="text-xs font-black text-slate-900 block truncate">{data.goal}</span>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-[10px] font-extrabold">
-                <span className="text-slate-900">Day {data.currentDay} of {data.goalDuration}</span>
-                <span className="text-slate-500">{Math.round((data.currentDay / data.goalDuration) * 100)}%</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
-                <div 
-                  className="h-full bg-slate-900 rounded-full transition-all duration-500" 
-                  style={{ width: `${(data.currentDay / data.goalDuration) * 100}%` }}
-                />
-              </div>
-            </div>
-          </GlassCard>
-
-          {/* Widget 2: Streak Counter */}
-          <GlassCard className="p-6 shadow-sm flex flex-col justify-between h-[180px] bg-white border border-slate-200/60">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Continuous Streak</span>
-              <Flame className="w-4.5 h-4.5 text-amber-500 fill-amber-500/10 animate-bounce-subtle" />
-            </div>
-            <div>
-              <span className="text-4xl font-black text-slate-900 tracking-tight block">🔥 {data.streak}</span>
-              <span className="text-[10px] font-semibold text-slate-550 block mt-1">Consecutive reflection days</span>
-            </div>
-            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-100 pt-2.5">
-              Target: Complete daily reflection
-            </div>
-          </GlassCard>
-
-          {/* Widget 3: Activity Rate */}
-          <GlassCard className="p-6 shadow-sm flex flex-col justify-between h-[180px] bg-white border border-slate-200/60">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Today&apos;s Habits</span>
-              <CheckCircle className="w-4.5 h-4.5 text-slate-400" />
-            </div>
-            <div>
-              <span className="text-4xl font-black text-slate-900 tracking-tight block">{activityRate}%</span>
-              <span className="text-[10px] font-semibold text-slate-550 block mt-1">
-                {completedActCount} of {totalActCount} activities completed
-              </span>
-            </div>
-            <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
-              <div 
-                className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                style={{ width: `${activityRate}%` }}
-              />
-            </div>
-          </GlassCard>
-
-          {/* Widget 4: Current Baseline */}
-          <GlassCard className="p-6 shadow-sm flex flex-col justify-between h-[180px] bg-white border border-slate-200/60 items-center justify-center">
-            {data.report ? (
-              <TensionDial score={data.report.anxietyScore} size="sm" />
-            ) : (
-              <div className="text-center space-y-1">
-                <Brain className="w-8 h-8 text-slate-400 mx-auto animate-pulse" />
-                <span className="text-xs font-bold text-slate-800 block">No Baseline Yet</span>
-              </div>
-            )}
-          </GlassCard>
-
-        </div>
-
-        {/* Dynamic SVG Trend Line Chart */}
-        <div className="grid md:grid-cols-3 gap-8">
-          
-          {/* Left panel: 7-Day Baseline anxiety score line chart */}
-          <GlassCard className="p-6.5 shadow-md md:col-span-2 space-y-6 bg-white border border-slate-200/60">
-            <div className="flex justify-between items-center">
-              <div className="space-y-0.5">
-                <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                  <Activity className="w-4.5 h-4.5 text-slate-700" />
-                  Weekly Progress Baseline Trends
-                </h3>
-                <p className="text-[10px] text-slate-500">
-                  {hasWeeklyData
-                    ? "From your daily reflection logs."
-                    : "Complete reflections to populate this chart."}
+          <div className="space-y-6 animate-fade-in">
+            <section className="bg-white border border-slate-200/60 rounded-3xl shadow-sm p-6 sm:p-8 space-y-6">
+              <div className="space-y-2 max-w-2xl">
+                <p className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Start here</p>
+                <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 leading-tight">
+                  What do you need today?
+                </h2>
+                <p className="text-sm text-slate-500 leading-relaxed">
+                  Pick the kind of support that fits this moment. You can always come back and choose something else.
                 </p>
               </div>
-              <span className="text-[9px] font-extrabold bg-slate-100 px-2.5 py-1 rounded-full text-slate-800">
-                Pacing Line (Anxiety Score)
-              </span>
-            </div>
 
-            <div className="relative w-full h-[150px] bg-slate-50 border border-slate-100 rounded-2xl p-2.5 flex items-center justify-center">
-              {!hasWeeklyData ? (
-                <div className="text-center px-6 space-y-1">
-                  <Activity className="w-6 h-6 text-slate-300 mx-auto" />
-                  <p className="text-[11px] font-bold text-slate-600">No reflection data yet</p>
-                  <p className="text-[9px] text-slate-400">
-                    Finish daily activities and submit your end-of-day reflection to see real baseline trends.
-                  </p>
-                </div>
-              ) : (
-                <svg className="w-full h-full overflow-visible" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
-                  <defs>
-                    <linearGradient id="chart-grad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#0f172a" stopOpacity="0.1" />
-                      <stop offset="100%" stopColor="#0f172a" stopOpacity="0.0" />
-                    </linearGradient>
-                  </defs>
+              <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <button
+                  type="button"
+                  onClick={() => setPanicRoomOpen(true)}
+                  className="group min-h-[170px] rounded-2xl border border-rose-100 bg-rose-50/70 hover:bg-rose-50 p-5 text-left transition-all cursor-pointer flex flex-col justify-between"
+                >
+                  <span className="w-10 h-10 rounded-2xl bg-white text-rose-600 border border-rose-100 flex items-center justify-center shadow-sm">
+                    <ShieldAlert className="w-5 h-5" />
+                  </span>
+                  <span className="space-y-1.5 block">
+                    <span className="text-base font-black text-slate-900 block">Calm down now</span>
+                    <span className="text-xs text-slate-600 leading-relaxed block">
+                      Open a focused grounding space for immediate support.
+                    </span>
+                  </span>
+                </button>
 
-                  <line x1="30" y1={mapY(1)} x2={chartWidth - 30} y2={mapY(1)} stroke="#e2e8f0" strokeDasharray="3" strokeWidth="0.8" />
-                  <line x1="30" y1={mapY(5)} x2={chartWidth - 30} y2={mapY(5)} stroke="#e2e8f0" strokeDasharray="3" strokeWidth="0.8" />
-                  <line x1="30" y1={mapY(10)} x2={chartWidth - 30} y2={mapY(10)} stroke="#e2e8f0" strokeDasharray="3" strokeWidth="0.8" />
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("companion")}
+                  className="group min-h-[170px] rounded-2xl border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 p-5 text-left transition-all cursor-pointer flex flex-col justify-between"
+                >
+                  <span className="w-10 h-10 rounded-2xl bg-slate-900 text-white flex items-center justify-center shadow-sm">
+                    <Brain className="w-5 h-5" />
+                  </span>
+                  <span className="space-y-1.5 block">
+                    <span className="text-base font-black text-slate-900 block">Talk it through</span>
+                    <span className="text-xs text-slate-600 leading-relaxed block">
+                      Go to your companion and name what feels heavy.
+                    </span>
+                  </span>
+                </button>
 
-                  {areaPath && <path d={areaPath} fill="url(#chart-grad)" />}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("habits")}
+                  className="group min-h-[170px] rounded-2xl border border-emerald-100 bg-emerald-50/60 hover:bg-emerald-50 p-5 text-left transition-all cursor-pointer flex flex-col justify-between"
+                >
+                  <span className="w-10 h-10 rounded-2xl bg-white text-emerald-700 border border-emerald-100 flex items-center justify-center shadow-sm">
+                    <CheckCircle className="w-5 h-5" />
+                  </span>
+                  <span className="space-y-1.5 block">
+                    <span className="text-base font-black text-slate-900 block">Do one small habit</span>
+                    <span className="text-xs text-slate-600 leading-relaxed block">
+                      Start with {data.activities?.[0]?.name || "the smallest next step"}.
+                    </span>
+                  </span>
+                </button>
 
-                  {lineSegments.map((segment, i) => (
-                    <polyline
-                      key={i}
-                      fill="none"
-                      stroke="#0f172a"
-                      strokeWidth="2.2"
-                      points={segment}
-                      strokeLinecap="round"
-                    />
-                  ))}
-
-                  {dataPoints.map((p: { idx: number; anxietyScore: number | null; x: number; y: number | null }) => (
-                    <g key={p.idx} className="group">
-                      <circle
-                        cx={p.x}
-                        cy={p.y!}
-                        r="4"
-                        fill="#ffffff"
-                        stroke="#0f172a"
-                        strokeWidth="2.5"
-                      />
-                      <text
-                        x={p.x}
-                        y={p.y! - 10}
-                        textAnchor="middle"
-                        className="text-[9px] font-black fill-slate-900 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                      >
-                        {p.anxietyScore}
-                      </text>
-                    </g>
-                  ))}
-
-                  {points.map((p: { dayName: string }, idx: number) => (
-                    <text
-                      key={idx}
-                      x={mapX(idx)}
-                      y={chartHeight - 3}
-                      textAnchor="middle"
-                      className="text-[8px] font-bold fill-slate-400"
-                    >
-                      {p.dayName}
-                    </text>
-                  ))}
-                </svg>
-              )}
-            </div>
-          </GlassCard>
-
-          {/* Right panel: Warning logs & Red Flags */}
-          <GlassCard className="p-6.5 shadow-md flex flex-col justify-between bg-white border border-slate-200/60">
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <ShieldAlert className="w-4.5 h-4.5 text-rose-500 animate-pulse" />
-                Red Flags & Risk Assessment
-              </h3>
-
-              <div className="space-y-3">
-                {data.redFlags && data.redFlags.length > 0 ? (
-                  data.redFlags.map((flag: string, idx: number) => (
-                    <div key={idx} className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2.5">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-                      <span className="text-[11px] font-semibold text-rose-800 leading-tight">
-                        {flag}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                    <div>
-                      <span className="text-[11px] font-bold text-emerald-800 block">No Red Flags Detected</span>
-                      <span className="text-[9px] text-emerald-600 block mt-0.5">Bio-regulatory parameters are pacing stable.</span>
-                    </div>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (completedActCount >= totalActCount) {
+                      startReflection();
+                    } else {
+                      setActiveTab("habits");
+                    }
+                  }}
+                  className="group min-h-[170px] rounded-2xl border border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50 p-5 text-left transition-all cursor-pointer flex flex-col justify-between"
+                >
+                  <span className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-700 flex items-center justify-center">
+                    <Sparkles className="w-5 h-5" />
+                  </span>
+                  <span className="space-y-1.5 block">
+                    <span className="text-base font-black text-slate-900 block">Reflect on today</span>
+                    <span className="text-xs text-slate-600 leading-relaxed block">
+                      {completedActCount >= totalActCount
+                        ? "Begin a short end-of-day check-in."
+                        : "Available after today's small habits."}
+                    </span>
+                  </span>
+                </button>
               </div>
-            </div>
+            </section>
 
-            <button
-              onClick={startReflection}
-              disabled={completedActCount < totalActCount}
-              className={`w-full mt-6 py-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${
-                completedActCount >= totalActCount
-                  ? "bg-slate-900 hover:bg-slate-800 text-white shadow-md shadow-slate-900/10 cursor-pointer hover:scale-[1.01]"
-                  : "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed"
-              }`}
-            >
-              {completedActCount >= totalActCount ? (
-                <>
-                  Complete Daily Reflection
-                  <ChevronRight className="w-4 h-4" />
-                </>
-              ) : (
-                <>
-                  Complete All Activities to Unlock Reflection ({completedActCount}/{totalActCount})
-                </>
-              )}
-            </button>
-          </GlassCard>
-
-            </div>
-          </>
+            <section className="grid sm:grid-cols-3 gap-3 text-xs">
+              <div className="rounded-2xl border border-slate-200/70 bg-white px-4 py-3">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block">Today&apos;s plan</span>
+                <span className="font-bold text-slate-800">{completedActCount} of {totalActCount} done</span>
+              </div>
+              <div className="rounded-2xl border border-slate-200/70 bg-white px-4 py-3">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block">Current focus</span>
+                <span className="font-bold text-slate-800">{data.report?.subtype || data.goal}</span>
+              </div>
+              <div className="rounded-2xl border border-slate-200/70 bg-white px-4 py-3">
+                <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 block">Plan day</span>
+                <span className="font-bold text-slate-800">Day {data.currentDay} of {data.goalDuration}</span>
+              </div>
+            </section>
+          </div>
         )}
 
         {/* AI Companion Chat */}
