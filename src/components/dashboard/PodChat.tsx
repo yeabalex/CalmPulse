@@ -37,6 +37,33 @@ interface PodChatProps {
   pod: PodData | null;
 }
 
+const INITIAL_DEMO_MESSAGES: ChatMessage[] = [
+  {
+    id: "msg_1",
+    userId: "m1",
+    userName: "Sophia (Somatic)",
+    text: "Did anyone try the somatic breathing break today? It really helped with my chest tension.",
+    createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    isOwn: false
+  },
+  {
+    id: "msg_2",
+    userId: "m2",
+    userName: "James (Social)",
+    text: "Yeah, turned off notifications at 9:30 last night. Slept way better than usual.",
+    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+    isOwn: false
+  },
+  {
+    id: "msg_3",
+    userId: "m3",
+    userName: "Maya (Cognitive)",
+    text: "Doing my pacing stroll right now. Trying to set boundaries with slack notifications is tough but worth it.",
+    createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
+    isOwn: false
+  }
+];
+
 export default function PodChat({ pod }: PodChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +80,24 @@ export default function PodChat({ pod }: PodChatProps) {
       setLoading(false);
       return;
     }
+
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) {
+      const saved = localStorage.getItem("calmpulse_demo_messages");
+      if (saved) {
+        try {
+          setMessages(JSON.parse(saved));
+        } catch {
+          setMessages(INITIAL_DEMO_MESSAGES);
+        }
+      } else {
+        setMessages(INITIAL_DEMO_MESSAGES);
+        localStorage.setItem("calmpulse_demo_messages", JSON.stringify(INITIAL_DEMO_MESSAGES));
+      }
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/pod/messages");
       if (res.ok) {
@@ -67,8 +112,12 @@ export default function PodChat({ pod }: PodChatProps) {
   }, [pod]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchMessages();
     if (!chatEnabled) return;
+
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) return; // Skip polling interval in demo mode
 
     const interval = setInterval(fetchMessages, 15000);
     return () => clearInterval(interval);
@@ -82,6 +131,53 @@ export default function PodChat({ pod }: PodChatProps) {
     if (!draft.trim() || sending) return;
     setSending(true);
     setError("");
+
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) {
+      const userMessage: ChatMessage = {
+        id: `msg_user_${Date.now()}`,
+        userId: "demo-user-123",
+        userName: "Dr. Hackathon Judge",
+        text: draft.trim(),
+        createdAt: new Date().toISOString(),
+        isOwn: true
+      };
+
+      const currentMessages = [...messages, userMessage];
+      setMessages(currentMessages);
+      localStorage.setItem("calmpulse_demo_messages", JSON.stringify(currentMessages));
+      setDraft("");
+      setSending(false);
+
+      // Simulate peer responses after a short delay
+      setTimeout(() => {
+        const botAnswers = [
+          "That sounds like a solid pacing win! Keep it up.",
+          "I completely relate to that. Setting boundaries is the hardest part.",
+          "Thanks for sharing, it helps to know others in the pod are pacing too.",
+          "Nice! Let me know if you do the somatic breath work later."
+        ];
+        const randomAnswer = botAnswers[Math.floor(Math.random() * botAnswers.length)];
+        const botPeers = ["Sophia (Somatic)", "James (Social)", "Maya (Cognitive)"];
+        const randomPeer = botPeers[Math.floor(Math.random() * botPeers.length)];
+
+        const botMessage: ChatMessage = {
+          id: `msg_bot_${Date.now()}`,
+          userId: "bot-peer",
+          userName: randomPeer,
+          text: randomAnswer,
+          createdAt: new Date().toISOString(),
+          isOwn: false
+        };
+
+        const finalMessages = [...currentMessages, botMessage];
+        setMessages(finalMessages);
+        localStorage.setItem("calmpulse_demo_messages", JSON.stringify(finalMessages));
+      }, 1500);
+
+      return;
+    }
+
     try {
       const res = await fetch("/api/pod/messages", {
         method: "POST",

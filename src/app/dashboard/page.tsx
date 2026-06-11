@@ -19,6 +19,59 @@ import {
 } from "@/lib/activityDetailCache";
 import { useAuth } from "@/lib/useAuth";
 
+const INITIAL_DEMO_DATA = {
+  name: "Dr. Hackathon Judge",
+  goal: "Reduce Anxiety & Regulate Sleep",
+  goalDuration: 14,
+  currentDay: 5,
+  streak: 3,
+  weeklyDataPointCount: 5,
+  weeklyProgress: [
+    { dayName: "Mon", anxietyScore: 7.5, hasData: true },
+    { dayName: "Tue", anxietyScore: 7.0, hasData: true },
+    { dayName: "Wed", anxietyScore: 8.0, hasData: true },
+    { dayName: "Thu", anxietyScore: 6.5, hasData: true },
+    { dayName: "Fri", anxietyScore: 6.8, hasData: true },
+    { dayName: "Sat", anxietyScore: null, hasData: false },
+    { dayName: "Sun", anxietyScore: null, hasData: false }
+  ],
+  report: {
+    anxietyScore: 6.8,
+    subtype: "Somatic Tension",
+    pacingRate: "45% Decelerated",
+  },
+  redFlags: [
+    "Autonomic Spike during meeting (10:15 AM)",
+    "Late screen activity (11:45 PM)"
+  ],
+  insights: "Your somatic markers indicate high tension levels mid-day. The pacing rate has been decelerated by 45% to help restore balance.",
+  achievements: [
+    { id: "ach_1", title: "Grounding Guru", desc: "Completed 3 somatic breathing pauses this week", unlocked: true },
+    { id: "ach_2", title: "Social Guard", desc: "Maintained digital boundaries for 5 consecutive days", unlocked: true },
+    { id: "ach_3", title: "Perfect Reflection Week", desc: "Logged reflections daily for 7 days", unlocked: false }
+  ],
+  activities: [
+    { id: "act_1", name: "Somatic Grounding Pause", description: "Take a 5m deep breathing break every 3 hours", type: "Somatic" },
+    { id: "act_2", name: "Digital Communication Limit", description: "Turn off notifications after 9:30 PM", type: "Digital" },
+    { id: "act_3", name: "Calm Pacing Walking", description: "10-minute slow pacing stroll post-lunch", type: "Physical" }
+  ],
+  completedActivities: [],
+  pod: {
+    id: "pod_42",
+    podNumber: 42,
+    focusArea: "Somatic Tension",
+    memberCount: 4,
+    activeCount: 3,
+    isForming: false,
+    members: [
+      { id: "m1", displayName: "Sophia (Somatic)", activeToday: true, isCurrentUser: false },
+      { id: "m2", displayName: "James (Social)", activeToday: true, isCurrentUser: false },
+      { id: "m3", displayName: "Maya (Cognitive)", activeToday: false, isCurrentUser: false },
+      { id: "demo-user-123", displayName: "Dr. Hackathon Judge", activeToday: true, isCurrentUser: true }
+    ]
+  }
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth({ redirectTo: "/login" });
@@ -54,6 +107,23 @@ export default function DashboardPage() {
 
   // Load dashboard telemetry data
   const fetchDashboardData = async () => {
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) {
+      const saved = localStorage.getItem("calmpulse_demo_data");
+      if (saved) {
+        try {
+          setData(JSON.parse(saved));
+        } catch {
+          setData(INITIAL_DEMO_DATA);
+        }
+      } else {
+        setData(INITIAL_DEMO_DATA);
+        localStorage.setItem("calmpulse_demo_data", JSON.stringify(INITIAL_DEMO_DATA));
+      }
+      setLoading(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/dashboard/data");
       if (res.ok) {
@@ -85,6 +155,41 @@ export default function DashboardPage() {
     setActivityDetail(null);
     setDetailForActivityId(null);
     setActivityDetailLoading(true);
+
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) {
+      setTimeout(() => {
+        if (activityDetailRequestRef.current !== act.id) return;
+        const mockDetails: Record<string, any> = {
+          act_1: {
+            guide: "Sit upright in a comfortable chair. Inhale slowly through your nose for 4 seconds, hold for 4 seconds, and exhale through your mouth for 4 seconds. Focus on the physical points of contact between your feet and the floor.",
+            duration: "5 minutes",
+            benefit: "Lowers autonomic nervous system arousal, reduces active chest tension, and prompts grounding."
+          },
+          act_2: {
+            guide: "Turn off all electronic displays (phone, laptop, TV) at least 30 minutes before sleep. Store your phone across the room or outside the bedroom. Engage in a non-screen wind-down ritual like reading or stretching.",
+            duration: "30 minutes",
+            benefit: "Reduces blue light inhibition of melatonin and helps the brain transition into delta wave sleep patterns."
+          },
+          act_3: {
+            guide: "Go outside and walk at an intentionally slow pace (about half your normal speed). Focus entirely on the physical sensations of each step and the environmental sounds around you. Do not check your device.",
+            duration: "10 minutes",
+            benefit: "Improves somatic grounding and breaks cognitive feedback loops associated with screen fatigue."
+          }
+        };
+
+        const detail = mockDetails[act.id] || {
+          guide: `Detailed walkthrough for ${act.name}. Follow the steps slowly, maintaining steady, pacing breathing patterns.`,
+          duration: "5-10 minutes",
+          benefit: "Promotes parasympathetic activation and cognitive recovery."
+        };
+
+        setActivityDetail(detail);
+        setDetailForActivityId(act.id);
+        setActivityDetailLoading(false);
+      }, 300);
+      return;
+    }
 
     const cached = getCachedActivityDetail(act.id);
     if (cached) {
@@ -134,6 +239,19 @@ export default function DashboardPage() {
 
   // Handle activity checklist complete toggle
   const toggleActivity = async (activityId: string, isCompleted: boolean) => {
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) {
+      const prevCompleted = data.completedActivities;
+      const newCompleted = isCompleted
+        ? [...prevCompleted, activityId]
+        : prevCompleted.filter((id: string) => id !== activityId);
+      
+      const updated = { ...data, completedActivities: newCompleted };
+      setData(updated);
+      localStorage.setItem("calmpulse_demo_data", JSON.stringify(updated));
+      return;
+    }
+
     // Optimistic UI update
     const prevCompleted = data.completedActivities;
     const newCompleted = isCompleted
@@ -160,6 +278,20 @@ export default function DashboardPage() {
     setReflectionOpen(true);
     setReflectionStep(1);
     setQuestionsLoading(true);
+
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) {
+      setTimeout(() => {
+        setQuestions([
+          "How did your somatic indicators respond during stress triggers today?",
+          "What boundary worked best to keep you centered today?",
+          "Are there any changes in sleep quality or wind-down rituals you want to note?"
+        ]);
+        setQuestionsLoading(false);
+      }, 400);
+      return;
+    }
+
     try {
       const res = await fetch("/api/dashboard/reflection/questions");
       if (res.ok) {
@@ -181,6 +313,39 @@ export default function DashboardPage() {
   // Submit the daily reflection logs
   const submitReflection = async () => {
     setSubmittingReflection(true);
+
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) {
+      setTimeout(() => {
+        const updatedProgress = [...data.weeklyProgress];
+        const newScore = parseFloat(ratings.anxiety.toFixed(1));
+        updatedProgress[5] = { dayName: "Sat", anxietyScore: newScore, hasData: true };
+
+        const updated = {
+          ...data,
+          streak: data.streak + 1,
+          weeklyProgress: updatedProgress,
+          weeklyDataPointCount: data.weeklyDataPointCount + 1,
+          report: {
+            ...data.report,
+            anxietyScore: newScore,
+            pacingRate: newScore > 6 ? "50% Decelerated" : "30% Decelerated"
+          },
+          completedActivities: [], // reset checklist
+          insights: `Daily reflection submitted! Based on your rated stress score of ${newScore}/10, your pacing baseline has been recalibrated to ${newScore > 6 ? "50% Decelerated" : "30% Decelerated"}.`
+        };
+
+        setData(updated);
+        localStorage.setItem("calmpulse_demo_data", JSON.stringify(updated));
+        
+        setReflectionOpen(false);
+        setSubmittingReflection(false);
+        setVentText("");
+        setAnswers({});
+      }, 600);
+      return;
+    }
+
     try {
       const res = await fetch("/api/dashboard/reflection/submit", {
         method: "POST",
@@ -304,6 +469,38 @@ export default function DashboardPage() {
       {/* Main Body */}
       <main className="flex-1 w-full max-w-7xl mx-auto px-6 pt-24 pb-16 space-y-8">
         
+        {typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true" && (
+          <div className="bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-3xl p-6.5 shadow-sm space-y-3.5 animate-fade-in text-slate-800">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-violet-600 animate-pulse" />
+              <h4 className="text-sm font-black text-slate-900 tracking-tight">Interactive Reviewer Sandbox Active</h4>
+            </div>
+            <p className="text-xs text-slate-650 leading-relaxed">
+              Welcome! You are logged in with offline mock credentials. You can test and inspect the entire workflow of the application without configuring any databases:
+            </p>
+            <div className="grid sm:grid-cols-3 gap-4 text-xs">
+              <div className="p-3 bg-white/70 border border-violet-100/50 rounded-2xl space-y-1">
+                <span className="font-extrabold text-slate-850 block">1. Today&apos;s Habits</span>
+                <span className="text-[10px] text-slate-500 block leading-relaxed">
+                  Check off the pacing habits (or click <strong>Auto-Complete</strong>) to satisfy your somatic targets.
+                </span>
+              </div>
+              <div className="p-3 bg-white/70 border border-violet-100/50 rounded-2xl space-y-1">
+                <span className="font-extrabold text-slate-850 block">2. Daily Reflection</span>
+                <span className="text-[10px] text-slate-500 block leading-relaxed">
+                  Completing your habits unlocks the **Daily Reflection**. Fill it out to see the stress dial and weekly chart update.
+                </span>
+              </div>
+              <div className="p-3 bg-white/70 border border-violet-100/50 rounded-2xl space-y-1">
+                <span className="font-extrabold text-slate-850 block">3. Peer Cohort Chat</span>
+                <span className="text-[10px] text-slate-500 block leading-relaxed">
+                  Send a message in the pod chat. Your anonymous phase-matched peers will respond to you in real-time.
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+        
         {/* Dashboard Title & Premium Control Banner */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200/50 pb-4">
           <div>
@@ -382,7 +579,7 @@ export default function DashboardPage() {
           {/* Widget 3: Activity Rate */}
           <GlassCard className="p-6 shadow-sm flex flex-col justify-between h-[180px] bg-white border border-slate-200/60">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Today's Habits</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Today&apos;s Habits</span>
               <CheckCircle className="w-4.5 h-4.5 text-slate-400" />
             </div>
             <div>
@@ -599,12 +796,28 @@ export default function DashboardPage() {
           <GlassCard className="p-6.5 shadow-md md:col-span-2 space-y-5 bg-white border border-slate-200/60">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-bold text-slate-900">Today's Pacing Plan</h3>
+                <h3 className="text-sm font-bold text-slate-900">Today&apos;s Pacing Plan</h3>
                 <p className="text-[10px] text-slate-500">Check off completed somatic pacing habits.</p>
               </div>
-              <span className="text-[9px] font-extrabold text-slate-450 bg-slate-50 px-2 py-1 rounded border border-slate-100">
-                Resets daily at midnight
-              </span>
+              <div className="flex items-center gap-2">
+                {typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true" && (
+                  <button
+                    onClick={() => {
+                      const allIds = data.activities?.map((a: any) => a.id) || [];
+                      const updated = { ...data, completedActivities: allIds };
+                      setData(updated);
+                      localStorage.setItem("calmpulse_demo_data", JSON.stringify(updated));
+                    }}
+                    className="px-2.5 py-1 rounded-full bg-violet-100 border border-violet-200 text-[9px] font-extrabold text-violet-750 hover:bg-violet-200 transition-all cursor-pointer flex items-center gap-1 shrink-0"
+                  >
+                    <Sparkles className="w-2.5 h-2.5" />
+                    Auto-Complete
+                  </button>
+                )}
+                <span className="text-[9px] font-extrabold text-slate-450 bg-slate-50 px-2 py-1 rounded border border-slate-100 shrink-0">
+                  Resets daily at midnight
+                </span>
+              </div>
             </div>
 
             <div className="space-y-2.5">
@@ -675,7 +888,7 @@ export default function DashboardPage() {
                 AI Insights & Adjustments
               </h3>
               <p className="text-xs text-slate-600 leading-relaxed italic">
-                "{data.insights}"
+                &ldquo;{data.insights}&rdquo;
               </p>
             </GlassCard>
 
@@ -832,7 +1045,7 @@ export default function DashboardPage() {
             {/* Slide 1: Rating Sliders */}
             {reflectionStep === 1 && (
               <div className="space-y-5">
-                <span className="text-xs font-bold text-slate-700 block">Assess today's vital indicators (1 to 10):</span>
+                <span className="text-xs font-bold text-slate-700 block">Assess today&apos;s vital indicators (1 to 10):</span>
                 
                 <div className="space-y-3">
                   {/* Mood Rating */}

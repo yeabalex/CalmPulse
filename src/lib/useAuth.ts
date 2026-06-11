@@ -26,6 +26,29 @@ export function useAuth({
     let active = true;
 
     async function checkAuth() {
+      // Check if demo sandbox mode is active
+      const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+      if (isDemo) {
+        if (active) {
+          setUser({
+            id: "demo-user-123",
+            name: "Dr. Hackathon Judge",
+            email: "judge@hackathon.com",
+            goal: "Reduce Anxiety & Regulate Sleep",
+            onboardingComplete: true,
+            cohortId: 42,
+          });
+          setAuthenticated(true);
+          setLoading(false);
+
+          // Redirect if user found and we want to redirect on found (e.g. landing or login pages)
+          if (redirectIfFound && redirectTo) {
+            router.push(redirectTo);
+          }
+        }
+        return;
+      }
+
       try {
         const res = await fetch("/api/auth/session");
         if (res.ok) {
@@ -72,6 +95,10 @@ export function useAuth({
   }, [router, redirectTo, redirectIfFound]);
 
   const logout = async () => {
+    // Clear demo flag if logging out
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("calmpulse_demo");
+    }
     try {
       const res = await fetch("/api/auth/logout", { method: "POST" });
       if (res.ok) {

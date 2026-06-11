@@ -57,6 +57,20 @@ export default function IntakePage() {
     setLoading(true);
     setLoadingMessage("AI Companion analyzing logs and preparing clarifications...");
     
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) {
+      setTimeout(() => {
+        setQuestions([
+          { id: "q1", question: "What physical symptoms (like racing heart, jaw tension) are you experiencing most intensely?" },
+          { id: "q2", question: "Does this feeling tend to build up slowly, or hit you in sudden waves?" },
+          { id: "q3", question: "What is one grounding habit that has helped you feel secure or calm in the past?" }
+        ]);
+        setStep(3);
+        setLoading(false);
+      }, 500);
+      return;
+    }
+
     try {
       const response = await fetch("/api/intake", {
         method: "POST",
@@ -89,6 +103,29 @@ export default function IntakePage() {
     setAnswers(formAnswers);
     setLoading(true);
     setLoadingMessage("Synthesizing responses and generating pacing baseline...");
+
+    const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
+    if (isDemo) {
+      setTimeout(() => {
+        const fallbackReport = {
+          anxietyScore: 7.2,
+          subtype: focusArea || "Somatic Tension",
+          symptoms: ["Autonomic Spikes", "Muscle Tension", "Cognitive Exhaustion"],
+          pacingRate: "40% Decelerated",
+          adjustments: [
+            { name: "Somatic Grounding Pause", type: "Somatic", trigger: "Take a 5m breathing pause every 3 hours" },
+            { name: "Digital Communication Limit", type: "Digital", trigger: "Turn off chat notifications after 9:30 PM" }
+          ],
+          cohortId: 42,
+          cohortDescription: "Cohorts of phase-matched peers working on social grounding boundaries."
+        };
+        setReport(fallbackReport);
+        saveAssessment(fallbackReport, formAnswers);
+        setStep(4);
+        setLoading(false);
+      }, 500);
+      return;
+    }
 
     try {
       const response = await fetch("/api/baseline", {

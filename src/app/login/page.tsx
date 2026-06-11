@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShieldCheck, Loader2, AlertCircle } from "lucide-react";
+import { ShieldCheck, Loader2, AlertCircle, Sparkles } from "lucide-react";
 import GlassCard from "@/components/shared/GlassCard";
 
 export default function LoginPage() {
@@ -168,11 +168,28 @@ export default function LoginPage() {
                 "Log In"
               )}
             </button>
+
+            <div className="relative my-4 flex items-center justify-center">
+              <span className="absolute w-full border-t border-slate-105" />
+              <span className="relative bg-white px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Or Reviewer Sandbox</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                localStorage.setItem("calmpulse_demo", "true");
+                window.location.href = "/dashboard";
+              }}
+              className="w-full py-4 bg-gradient-to-r from-violet-600 to-indigo-650 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-600/10 flex items-center justify-center gap-2 cursor-pointer transition-all duration-300"
+            >
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              Launch Reviewer Sandbox
+            </button>
           </form>
 
           {/* Prompt to register */}
           <div className="text-center pt-6 border-t border-slate-100 mt-6 text-xs text-slate-500">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/intake" className="font-bold text-slate-900 hover:underline">
               Take Assessment & Register
             </Link>

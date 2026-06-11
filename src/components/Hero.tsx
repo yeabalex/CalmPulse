@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Zap, Shield } from "lucide-react";
+import { ArrowRight, Zap, Shield, Sparkles } from "lucide-react";
 import GlassCard from "@/components/shared/GlassCard";
 import TensionDial from "@/components/shared/vitals/TensionDial";
 import HeartRateWidget from "@/components/shared/vitals/HeartRateWidget";
@@ -46,6 +46,16 @@ export default function Hero() {
               Start Free Assessment
               <ArrowRight className="w-4 h-4" />
             </Link>
+            <button
+              onClick={() => {
+                localStorage.setItem("calmpulse_demo", "true");
+                window.location.href = "/dashboard";
+              }}
+              className="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-to-r from-violet-600 to-indigo-650 text-white font-bold hover:from-violet-700 hover:to-indigo-700 transition-all duration-300 flex items-center justify-center gap-2 hover:scale-[1.02] shadow-lg shadow-indigo-600/20 cursor-pointer"
+            >
+              <Sparkles className="w-4 h-4 animate-pulse" />
+              Reviewer Sandbox
+            </button>
             <Link
               href="#how-it-works"
               className="w-full sm:w-auto px-8 py-4 rounded-full border border-slate-900/30 font-bold text-slate-900 hover:bg-slate-900/5 transition-all duration-300 flex items-center justify-center"
