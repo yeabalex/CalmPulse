@@ -90,7 +90,8 @@ jobs:
             NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
             SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE}
             EOF
-            sudo chmod 600 "${ENV_FILE}"
+            sudo chown -R "$USER:$USER" "$(dirname "${ENV_FILE}")"
+            chmod 600 "${ENV_FILE}"
 
             echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
             docker pull "${IMAGE}"
