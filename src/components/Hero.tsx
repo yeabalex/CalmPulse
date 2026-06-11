@@ -33,9 +33,8 @@ export default function Hero() {
               Health Matters
             </span>
           </h1>
-          
-          <p className="text-base md:text-lg text-slate-800 max-w-lg leading-relaxed mx-auto lg:mx-0 font-medium">
-            CalmPulse turns your daily stress logs and venting into a personalized daily habit plan. Take control of your day with real-time advice from your 1-on-1 AI coach.
+          <p className="text-xs.5 sm:text-xs.5 text-slate-800 max-w-xl leading-relaxed mx-auto lg:mx-0 font-semibold bg-white/20 p-4 rounded-2xl backdrop-blur-sm border border-white/30">
+            Most wellness apps are just to-do lists that shame you when you don&apos;t complete them. We built CalmPulse on the concept of behavioral pacing—acting like a thermostat for your nervous system. If your emotional indicators show you are burning out, CalmPulse automatically slows down your daily plan, injecting somatic grounding exercises and screen boundaries. As a non-clinical lifestyle pacing companion, you pace alongside your 1-on-1 AI coach to safely reduce anxiety levels and build good habits.
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 pt-4">
