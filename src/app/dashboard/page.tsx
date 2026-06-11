@@ -81,6 +81,7 @@ export default function DashboardPage() {
   const [isPremium, setIsPremium] = useState(false);
   const [voicePlaying, setVoicePlaying] = useState(false);
   const [panicRoomOpen, setPanicRoomOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Reflection Modal state
   const [reflectionOpen, setReflectionOpen] = useState(false);
@@ -534,8 +535,50 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Biometrics Top Grid */}
-        <div className="grid md:grid-cols-4 gap-6">
+        {/* Sub-Navigation Tabs */}
+        <div className="flex border-b border-slate-200 gap-6 overflow-x-auto pb-px scrollbar-none mb-6 text-slate-800">
+          <button
+            onClick={() => setActiveTab("overview")}
+            className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === "overview"
+                ? "border-slate-900 text-slate-900 font-extrabold"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Overview
+          </button>
+          <button
+            onClick={() => setActiveTab("habits")}
+            className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === "habits"
+                ? "border-slate-900 text-slate-900 font-extrabold"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Daily Habits
+            {data.completedActivities && data.activities && (
+              <span className="text-[10px] bg-slate-105 text-slate-600 px-2 py-0.5 rounded-full font-extrabold">
+                {data.completedActivities.length}/{data.activities.length}
+              </span>
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab("pod")}
+            className={`pb-3 text-xs font-bold border-b-2 transition-all cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === "pod"
+                ? "border-slate-900 text-slate-900 font-extrabold"
+                : "border-transparent text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            Peer Pod Group
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          </button>
+        </div>
+
+        {activeTab === "overview" && (
+          <>
+            {/* Biometrics Top Grid */}
+            <div className="grid md:grid-cols-4 gap-6">
           
           {/* Widget 1: Day Counter */}
           <GlassCard className="p-6 shadow-sm flex flex-col justify-between h-[180px] bg-white border border-slate-200/60">
@@ -756,10 +799,13 @@ export default function DashboardPage() {
             </button>
           </GlassCard>
 
-        </div>
+            </div>
+          </>
+        )}
 
         {/* Cohort Pod Group Chat */}
-        <div className="grid md:grid-cols-3 gap-8">
+        {activeTab === "pod" && (
+          <div className="grid md:grid-cols-3 gap-8 animate-fade-in">
           <div className="md:col-span-2">
             <PodChat pod={data.pod} />
           </div>
@@ -787,10 +833,12 @@ export default function DashboardPage() {
               <p className="text-[10px] text-slate-500">Finish onboarding to be matched into a pod of 2–5 peers.</p>
             )}
           </GlassCard>
-        </div>
+          </div>
+        )}
 
         {/* Activities Checklist & Achievements */}
-        <div className="grid md:grid-cols-3 gap-8">
+        {activeTab === "habits" && (
+          <div className="grid md:grid-cols-3 gap-8 animate-fade-in">
           
           {/* Today's pacing habits checklist */}
           <GlassCard className="p-6.5 shadow-md md:col-span-2 space-y-5 bg-white border border-slate-200/60">
@@ -918,10 +966,11 @@ export default function DashboardPage() {
 
           </div>
 
-        </div>
+          </div>
+        )}
 
         {/* Premium (POD) Toggled Section */}
-        {isPremium && (
+        {activeTab === "overview" && isPremium && (
           <div className="border-t border-dashed border-slate-350 pt-8 space-y-8 animate-fade-in">
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-indigo-650 animate-pulse" />
