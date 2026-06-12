@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { 
   X, Wind, Heart, Sparkles, CheckCircle, 
   MessageSquare, Loader2, ArrowRight, RefreshCw, AlertTriangle
@@ -13,19 +13,25 @@ interface PanicRoomModalProps {
 }
 
 type TabType = "breathe" | "vent" | "ai";
-type BreatheState = "inhale" | "hold-in" | "exhale" | "hold-out";
+type BreathPhase = {
+  label: string;
+  duration: number;
+};
+
+const BREATH_PHASES: BreathPhase[] = [
+  { label: "Inhale", duration: 4000 },
+  { label: "Hold your breath", duration: 4000 },
+  { label: "Exhale", duration: 4000 },
+  { label: "Hold your breath", duration: 4000 },
+];
 
 export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps) {
   const [activeTab, setActiveTab] = useState<TabType>("breathe");
-  
-  // Box Breathing state
-  const [breatheState, setBreatheState] = useState<BreatheState>("inhale");
-  const [breatheSeconds, setBreatheSeconds] = useState(4);
-  const breatheIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [breathPhaseIndex, setBreathPhaseIndex] = useState(0);
 
   // Venting state
   const [ventText, setVentText] = useState("");
-  const [isDissolving, setIsDissolving] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [showAiResult, setShowAiResult] = useState(false);
 
   // AI suggestion state
@@ -35,55 +41,53 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
 
   // Reset modal states when opened
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) return;
+
+    const resetId = window.setTimeout(() => {
       setActiveTab("breathe");
-      setBreatheState("inhale");
-      setBreatheSeconds(4);
+      setBreathPhaseIndex(0);
       setVentText("");
-      setIsDissolving(false);
+      setIsProcessing(false);
       setShowAiResult(false);
       setAiData(null);
       setCompletedSteps({});
-    }
+    }, 0);
+
+    return () => window.clearTimeout(resetId);
   }, [isOpen]);
 
-  // Box Breathing cycle timer
   useEffect(() => {
-    if (!isOpen || activeTab !== "breathe") {
-      if (breatheIntervalRef.current) clearInterval(breatheIntervalRef.current);
-      return;
-    }
+    if (!isOpen) return;
 
-    breatheIntervalRef.current = setInterval(() => {
-      setBreatheSeconds((prev) => {
-        if (prev <= 1) {
-          // Transition states
-          setBreatheState((currState) => {
-            switch (currState) {
-              case "inhale": return "hold-in";
-              case "hold-in": return "exhale";
-              case "exhale": return "hold-out";
-              case "hold-out": return "inhale";
-            }
-          });
-          return 4;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => {
-      if (breatheIntervalRef.current) clearInterval(breatheIntervalRef.current);
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
     };
-  }, [isOpen, activeTab]);
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  useEffect(() => {
+    if (!isOpen || activeTab !== "breathe") return;
+
+    const currentPhase = BREATH_PHASES[breathPhaseIndex];
+    const phaseTimer = window.setTimeout(() => {
+      setBreathPhaseIndex((currentIndex) => (currentIndex + 1) % BREATH_PHASES.length);
+    }, currentPhase.duration);
+
+    return () => window.clearTimeout(phaseTimer);
+  }, [isOpen, activeTab, breathPhaseIndex]);
 
   if (!isOpen) return null;
+
+  const breathPhase = BREATH_PHASES[breathPhaseIndex];
+  const breathInstruction = breathPhase.label;
 
   // Handle Vent release & trigger AI response
   const handleReleaseVent = async () => {
     if (!ventText.trim()) return;
 
-    setIsDissolving(true);
+    setIsProcessing(true);
     setAiLoading(true);
     setAiData(null);
     setCompletedSteps({});
@@ -95,7 +99,6 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
       body: JSON.stringify({ ventText }),
     });
 
-    // Let the dissolving animation play out for 1.8 seconds
     setTimeout(async () => {
       try {
         const res = await fetchPromise;
@@ -111,20 +114,20 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
       } catch {
         // Safe fallback in case of errors
         setAiData({
-          validation: "You are experiencing an intense physiological stress response. Rest assured, you are safe, this feeling is temporary, and your nervous system will settle shortly.",
+          validation: "This is a strong stress wave. You are safe right now, this feeling is temporary, and your body can settle again.",
           steps: [
-            "Splashing very cold water on your face to trigger an automatic heart-rate cooldown.",
+            "Splash cool water on your face or hold something cool for a few breaths.",
             "Take 5 slow breaths, exhaling double the length of your inhales.",
             "Focus on naming 3 physical objects you can touch in your room right now."
           ]
         });
       } finally {
         setAiLoading(false);
-        setIsDissolving(false);
+        setIsProcessing(false);
         setShowAiResult(true);
         setActiveTab("ai");
       }
-    }, 1800);
+    }, 500);
   };
 
   // Checkbox handlers for the somatic steps
@@ -137,42 +140,6 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
 
   const allStepsCompleted = aiData && aiData.steps.every((_, idx) => completedSteps[idx]);
 
-  // Breathing state messages & classes
-  const getBreatheConfig = () => {
-    switch (breatheState) {
-      case "inhale":
-        return {
-          title: "Breathe In...",
-          subtitle: "Fill your lungs slowly and deeply",
-          circleClass: "scale-[1.6] bg-gradient-to-tr from-teal-400 to-indigo-500 shadow-[0_0_50px_20px_rgba(45,212,191,0.4)]",
-          instruction: "Feel the fresh energy entering your chest"
-        };
-      case "hold-in":
-        return {
-          title: "Hold it...",
-          subtitle: "Rest in the quiet stillness",
-          circleClass: "scale-[1.6] bg-gradient-to-tr from-indigo-500 to-violet-500 shadow-[0_0_50px_20px_rgba(99,102,241,0.4)]",
-          instruction: "Let the air settle within you"
-        };
-      case "exhale":
-        return {
-          title: "Exhale slowly...",
-          subtitle: "Let go of all the pressure",
-          circleClass: "scale-[1.0] bg-gradient-to-tr from-violet-500 to-slate-500 shadow-[0_0_30px_10px_rgba(139,92,246,0.2)]",
-          instruction: "Push the tension out with your breath"
-        };
-      case "hold-out":
-        return {
-          title: "Hold...",
-          subtitle: "Wait gently for the next cycle",
-          circleClass: "scale-[1.0] bg-gradient-to-tr from-slate-500 to-teal-400 shadow-[0_0_30px_10px_rgba(100,116,139,0.2)]",
-          instruction: "Prepare to receive calm breath"
-        };
-    }
-  };
-
-  const breatheConfig = getBreatheConfig();
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/90 backdrop-blur-2xl transition-all duration-300 animate-fade-in">
       
@@ -180,9 +147,15 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
       <button 
         onClick={onClose}
         className="absolute top-6 right-6 p-2 rounded-full bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer border border-slate-800"
-        title="Leave Calming Room"
+        title="I need to leave now"
       >
         <X className="w-5 h-5" />
+      </button>
+      <button
+        onClick={onClose}
+        className="absolute top-6 left-6 px-4 py-2 rounded-full bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer border border-slate-800 text-xs font-bold"
+      >
+        I need to leave now
       </button>
 
       <div className="w-full max-w-2xl flex flex-col items-center space-y-8 text-center">
@@ -190,13 +163,13 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
         {/* Soft Header Cues */}
         <div className="space-y-2">
           <div className="flex items-center justify-center gap-2">
-            <Heart className="w-5 h-5 text-rose-500 fill-rose-500/10 animate-pulse" />
+            <Heart className="w-5 h-5 text-teal-300 fill-teal-300/10" />
             <h2 className="text-xl font-bold tracking-tight text-white font-sans">
-              Panic Grounding Room
+              Calm Space
             </h2>
           </div>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
-            Take a pause. There is no urgency. Let's restore bio-stability at your own pace.
+            Take a pause. There is no urgency. Move at your own pace.
           </p>
         </div>
 
@@ -204,7 +177,8 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
         <div className="flex bg-slate-900/60 border border-slate-800/80 p-1 rounded-2xl shadow-inner w-full max-w-md">
           <button
             onClick={() => {
-              if (!isDissolving) {
+              if (!isProcessing) {
+                setBreathPhaseIndex(0);
                 setActiveTab("breathe");
                 setShowAiResult(false);
               }
@@ -221,7 +195,7 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
           
           <button
             onClick={() => {
-              if (!isDissolving) {
+              if (!isProcessing) {
                 if (showAiResult && aiData) {
                   setActiveTab("ai");
                 } else {
@@ -236,7 +210,7 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
             }`}
           >
             <MessageSquare className="w-4 h-4" />
-            {showAiResult ? "AI Centering" : "Vent & Dissolve"}
+            {showAiResult ? "Steady Steps" : "Write Thoughts"}
           </button>
         </div>
 
@@ -244,27 +218,20 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
         {activeTab === "breathe" && (
           <div className="flex flex-col items-center justify-center space-y-12 py-10 w-full animate-fade-in">
             <div className="relative flex items-center justify-center w-56 h-56">
-              
-              {/* Outer Breathing circle with custom scale transitions */}
-              <div 
-                className={`absolute w-32 h-32 rounded-full opacity-60 transition-all duration-[4000ms] cubic-bezier(0.4, 0, 0.2, 1) ${breatheConfig.circleClass}`} 
-              />
-              
-              {/* Inner Circle timer text */}
+              <div className="absolute w-32 h-32 rounded-full bg-gradient-to-tr from-teal-300 via-sky-400 to-slate-300 shadow-[0_0_45px_16px_rgba(45,212,191,0.24)] animate-calm-breath" />
               <div className="relative z-10 flex flex-col items-center justify-center text-white">
-                <span className="text-4xl font-black tracking-tighter">{breatheSeconds}</span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-slate-200/60 mt-0.5">
-                  {breatheState.replace("-", " ")}
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-200/70 mt-0.5">
+                  {breathInstruction}
                 </span>
               </div>
             </div>
 
             <div className="space-y-2 h-[70px]">
               <h3 className="text-lg font-bold text-white transition-all">
-                {breatheConfig.title}
+                Box Breathing
               </h3>
               <p className="text-xs text-slate-400 italic">
-                {breatheConfig.instruction}
+                Inhale 4 seconds, hold 4, exhale 4, hold 4.
               </p>
             </div>
             
@@ -272,7 +239,7 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
               onClick={() => setActiveTab("vent")}
               className="px-6 py-3 rounded-full bg-slate-900/60 border border-slate-800 text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-850 hover:border-slate-700 transition-all cursor-pointer flex items-center gap-1.5"
             >
-              Need to vent thoughts? Go to venting
+              Need to write thoughts?
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
@@ -284,20 +251,19 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
             <div className="space-y-1.5 text-center">
               <h3 className="text-sm font-bold text-white">Write it Down</h3>
               <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
-                Pour out your panic, anxiety, or stress. We will release it completely.
+                Write what is here. Your words can stay with you while we find steady next steps.
               </p>
             </div>
 
             <div 
-              className={`relative bg-slate-900/40 border border-slate-800 rounded-3xl p-5 shadow-2xl transition-all duration-[1800ms] ${
-                isDissolving ? "translate-y-[-100px] scale-50 opacity-0 blur-md pointer-events-none" : ""
-              }`}
+              className="relative bg-slate-900/40 border border-slate-800 rounded-3xl p-5 shadow-2xl transition-colors duration-300"
             >
               <textarea
                 value={ventText}
                 onChange={(e) => setVentText(e.target.value)}
-                placeholder="I'm feeling so anxious because..."
-                disabled={isDissolving}
+                placeholder="I'm feeling overwhelmed because..."
+                disabled={isProcessing}
+                maxLength={2000}
                 className="w-full h-40 bg-transparent border-0 text-slate-200 placeholder-slate-650 text-xs focus:ring-0 focus:outline-none resize-none font-medium leading-relaxed"
               />
               
@@ -308,23 +274,23 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
                 <button
                   type="button"
                   onClick={handleReleaseVent}
-                  disabled={!ventText.trim() || isDissolving}
+                  disabled={!ventText.trim() || isProcessing}
                   className={`px-5 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer ${
-                    ventText.trim() && !isDissolving
+                    ventText.trim() && !isProcessing
                       ? "bg-white text-slate-950 hover:bg-slate-100 hover:scale-[1.02]"
                       : "bg-slate-900 text-slate-650 border border-slate-800 cursor-not-allowed"
                   }`}
                 >
-                  Release to the Ether
+                  Find Steady Steps
                   <Sparkles className="w-3.5 h-3.5" />
                 </button>
               </div>
             </div>
 
-            {isDissolving && (
-              <div className="space-y-2 text-center animate-pulse">
+            {isProcessing && (
+              <div className="space-y-2 text-center">
                 <Loader2 className="w-5 h-5 text-slate-400 animate-spin mx-auto" />
-                <span className="text-[10px] font-bold text-slate-400">Dissolving and forming warm reassurance...</span>
+                <span className="text-[10px] font-bold text-slate-400">Your words are here. Finding warm reassurance...</span>
               </div>
             )}
           </div>
@@ -336,8 +302,8 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
             {aiLoading ? (
               <div className="flex flex-col items-center py-20 gap-3 text-center w-full">
                 <Loader2 className="w-8 h-8 text-white animate-spin" />
-                <p className="text-xs font-bold text-white">Formulating clinical validation...</p>
-                <p className="text-[10px] text-slate-550 max-w-[200px]">Your vent has been released. Now let's settle your physiology.</p>
+                <p className="text-xs font-bold text-white">Finding steady next steps...</p>
+                <p className="text-[10px] text-slate-550 max-w-[220px]">Your words are still here with you.</p>
               </div>
             ) : aiData ? (
               <div className="space-y-6">
@@ -346,21 +312,21 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
                 <GlassCard className="p-5.5 bg-slate-900/40 border border-slate-800/80 shadow-2xl space-y-3 rounded-2xl">
                   <div className="flex items-center gap-2 text-slate-200">
                     <Sparkles className="w-4.5 h-4.5 text-indigo-400 shrink-0" />
-                    <span className="text-xs font-bold tracking-tight">AI Centering Insight</span>
+                    <span className="text-xs font-bold tracking-tight">Centering Insight</span>
                   </div>
                   <p className="text-xs text-slate-300 leading-relaxed font-medium italic">
-                    "{aiData.validation}"
+                    &ldquo;{aiData.validation}&rdquo;
                   </p>
                 </GlassCard>
 
-                {/* Checklist Somatic Tasks */}
+                {/* Checklist grounding tasks */}
                 <div className="space-y-3">
                   <div className="space-y-0.5">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
                       Grounding Actions Checklist
                     </span>
                     <span className="text-[9px] text-slate-500 block leading-snug">
-                      Perform each task physically and tick it off to regain biological stability.
+                      Try each step gently and mark it when it feels complete enough.
                     </span>
                   </div>
 
@@ -410,12 +376,12 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
                 >
                   {allStepsCompleted ? (
                     <>
-                      I feel stable now — Return to Dashboard
+                      Return to Dashboard
                       <CheckCircle className="w-4 h-4 text-slate-950" />
                     </>
                   ) : (
                     <>
-                      Complete All Grounding Steps to Lock Stability ({Object.values(completedSteps).filter(Boolean).length}/3)
+                      Try the grounding steps to continue ({Object.values(completedSteps).filter(Boolean).length}/3)
                     </>
                   )}
                 </button>
@@ -430,7 +396,7 @@ export default function PanicRoomModal({ isOpen, onClose }: PanicRoomModalProps)
                     className="text-[10px] font-bold text-slate-450 hover:text-slate-300 transition-colors cursor-pointer flex items-center gap-1"
                   >
                     <RefreshCw className="w-3 h-3" />
-                    Vent about something else
+                    Write about something else
                   </button>
                 </div>
               </div>

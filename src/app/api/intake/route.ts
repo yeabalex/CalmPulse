@@ -12,10 +12,10 @@ const FALLBACK_QUESTIONS: Record<string, string[]> = {
     "Are you experiencing physical tension (such as a clenched jaw or tight shoulders) at this moment?",
     "After a social stressor, do you tend to spend significant time mentally replaying your performance?"
   ],
-  "Generalized Tension & Panic": [
+  "Generalized Tension": [
     "Do you notice your breathing becoming shallow, rapid, or irregular when the tension begins to spike?",
     "Is there a specific time of day when this physical restlessness feels most overwhelming?",
-    "Have you noticed any somatic warnings (like sudden temperature changes or dizziness) before the tension peaks?"
+    "Have you noticed any body signals, like sudden temperature changes or dizziness, before the tension peaks?"
   ],
   "Burnout & Attention Fatigue": [
     "Are you experiencing screen aversion, eye strain, or a feeling of mental sluggishness when trying to focus?",
@@ -64,9 +64,9 @@ export async function POST(req: Request) {
     });
 
     const CALMPULSE_PRIOR_KNOWLEDGE = `
-CalmPulse Clinical Pacing Methodology:
+CalmPulse gentle pacing method:
 1. Social & Performance Anxiety: Structured cognitive pacing prior to events, caffeine restrictions (4 hours buffer before triggers), and post-stressor grounding intervals. Focused on "Social Receptive Index".
-2. Generalized Tension & Panic: Somatic monitoring, vagus nerve breathing pacers (e.g. 4-7-8 cycles), cold-water sensory grounding, and interval breaks (5m screen-free rest every 60m of continuous activity). Focused on "Hyper-Arousal Hyper-Pacing" model.
+2. Generalized Tension: body calm checks, slow breathing breaks, cool-water grounding, and interval breaks (5m screen-free rest every 60m of continuous activity).
 3. Burnout & Attention Fatigue: Digital boundary buffers (disable screen syncs after 9:30 PM), structured workflow intervals (50-10 work-rest cycles), and mid-day physical activation stretches. Focused on "Cognitive Load Recovery" model.
 `;
 
@@ -78,7 +78,7 @@ The user has chosen the focus area: "${focusArea}".
 They vented the following: "${ventText || "No vent provided."}".
 
 Based on the CalmPulse pacing methodology, their focus area, and their vent, generate exactly 3 highly targeted clarifying questions. 
-These questions should help CalmPulse calibrate their autonomic pacing parameters (such as somatic triggers, screen habits, and breathing changes).
+These questions should help CalmPulse shape their pacing plan, such as body cues, screen habits, and breathing changes.
 
 Return ONLY a JSON array of strings containing the questions. Do not include markdown code block formatting or any other text.
 Example format:

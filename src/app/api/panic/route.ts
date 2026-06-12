@@ -15,10 +15,10 @@ const FALLBACK_SUGGESTIONS: Array<{ keywords: string[]; response: GroundingRespo
   {
     keywords: ["heart", "breath", "choke", "suffocate", "chest", "shake", "shaking"],
     response: {
-      validation: "I hear that your heart is racing and your body is feeling intense physical tension. Remember that these are autonomic sensations; you are physically safe and this adrenaline wave will pass.",
+      validation: "I hear that your heart is racing and your body feels tense. You are physically safe, and this stress wave will pass.",
       steps: [
-        "Extend your exhale: Inhale for 4 seconds, then exhale slowly for 7 seconds to stimulate your vagus nerve.",
-        "Splash very cold water on your face or hold an ice cube in your hand to trigger the mammalian dive reflex.",
+        "Let your out-breath be longer than your in-breath for a few slow rounds.",
+        "Splash cool water on your face or hold something cool in your hand.",
         "Drop your shoulders, unclamp your jaw, and let your hands rest completely loose on your lap."
       ]
     }
@@ -86,13 +86,13 @@ export async function POST(req: Request) {
       apiKey: apiKey,
     });
 
-    const prompt = `You are a clinical AI somatic coaching assistant for CalmPulse.
-The user is experiencing an acute panic or anxiety spike and has just written this raw vent log:
-"${ventText || "No vent log provided. Just experiencing sudden panic."}"
+    const prompt = `You are a warm grounding assistant for CalmPulse.
+The user is experiencing an intense stress wave and has just written this raw vent log:
+"${ventText || "No vent log provided. They are feeling a sudden stress wave."}"
 
 Provide:
-1. validation: A warm, validating, highly reassuring clinical validation of safety (exactly 2 sentences). Reassure them that they are physically safe, that this physiological response is temporary, and that their body is simply processing adrenaline.
-2. steps: An array of 3 highly actionable somatic/grounding tasks customized specifically to target the content or physical symptoms in their vent. Use simple, warm, supportive language.
+1. validation: A warm, validating reassurance of safety (exactly 2 sentences). Reassure them that they are physically safe, that this body response is temporary, and that it can settle.
+2. steps: An array of 3 highly actionable grounding tasks customized specifically to target the content or physical symptoms in their vent. Use simple, warm, supportive language.
 
 Return ONLY a JSON object in this format:
 {

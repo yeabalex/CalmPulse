@@ -1,9 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { 
-  Zap, Activity, Heart, Flame, ShieldAlert, Award, 
+  Activity, Heart, Leaf, Award, 
   Calendar, CheckCircle, Brain, Sparkles, LogOut, 
   ChevronRight, ArrowRight, Loader2, Play, Volume2, Download, Info
 } from "lucide-react";
@@ -28,16 +27,16 @@ const MOCK_HISTORY_LOGS: HistoryEntry[] = [
     ventText: "Felt shoulder tension spike during the team sync due to a sudden release deadline. Struggled to focus afterwards.",
     completedCount: 3,
     totalCount: 3,
-    completedHabits: ["Somatic Grounding Pause", "Digital Communication Limit", "Calm Pacing Walking"]
+    completedHabits: ["Body Calm Pause", "Digital Communication Limit", "Calm Pacing Walking"]
   },
   {
     id: "hist_2",
     date: "Tuesday, June 9",
     anxietyScore: 6.5,
-    ventText: "Somatic breaks helped me stay focused, but got late screen alerts because I stayed up scrolling.",
+    ventText: "Breathing breaks helped me stay focused, but got late screen alerts because I stayed up scrolling.",
     completedCount: 2,
     totalCount: 3,
-    completedHabits: ["Somatic Grounding Pause", "Calm Pacing Walking"]
+    completedHabits: ["Body Calm Pause", "Calm Pacing Walking"]
   },
   {
     id: "hist_3",
@@ -46,12 +45,14 @@ const MOCK_HISTORY_LOGS: HistoryEntry[] = [
     ventText: "Extreme chest tightness after arguing about task prioritization. Felt very reactive and overwhelmed.",
     completedCount: 1,
     totalCount: 3,
-    completedHabits: ["Somatic Grounding Pause"]
+    completedHabits: ["Body Calm Pause"]
   }
 ];
 
+const REFLECTION_DRAFT_KEY = "calmpulse_reflection_draft";
+
 const INITIAL_DEMO_DATA = {
-  name: "Dr. Hackathon Judge",
+  name: "Demo User",
   goal: "Reduce Anxiety & Regulate Sleep",
   goalDuration: 14,
   currentDay: 5,
@@ -68,21 +69,21 @@ const INITIAL_DEMO_DATA = {
   ],
   report: {
     anxietyScore: 6.8,
-    subtype: "Somatic Tension",
-    pacingRate: "45% Decelerated",
+    subtype: "Body Tension",
+    pacingRate: "Gentler Pace",
   },
   redFlags: [
-    "Autonomic Spike during meeting (10:15 AM)",
+    "Stress wave during meeting (10:15 AM)",
     "Late screen activity (11:45 PM)"
   ],
-  insights: "Your somatic markers indicate high tension levels mid-day. The pacing rate has been decelerated by 45% to help restore balance.",
+  insights: "Your notes show higher body tension mid-day. Today’s plan adds slower pacing to help you settle.",
   achievements: [
-    { id: "ach_1", title: "Grounding Guru", desc: "Completed 3 somatic breathing pauses this week", unlocked: true },
-    { id: "ach_2", title: "Social Guard", desc: "Maintained digital boundaries for 5 consecutive days", unlocked: true },
-    { id: "ach_3", title: "Perfect Reflection Week", desc: "Logged reflections daily for 7 days", unlocked: false }
+    { id: "ach_1", title: "Took Time to Pause", desc: "Made space for steady breathing this week", unlocked: true },
+    { id: "ach_2", title: "Protected Rest", desc: "Set a helpful digital boundary", unlocked: true },
+    { id: "ach_3", title: "Returned to Reflection", desc: "Came back to check in with yourself", unlocked: false }
   ],
   activities: [
-    { id: "act_1", name: "Somatic Grounding Pause", description: "Take a 5m deep breathing break every 3 hours", type: "Somatic" },
+    { id: "act_1", name: "Body Calm Pause", description: "Take a 5m deep breathing break every 3 hours", type: "Body Calm" },
     { id: "act_2", name: "Digital Communication Limit", description: "Turn off notifications after 9:30 PM", type: "Digital" },
     { id: "act_3", name: "Calm Pacing Walking", description: "10-minute slow pacing stroll post-lunch", type: "Physical" }
   ],
@@ -91,21 +92,20 @@ const INITIAL_DEMO_DATA = {
   pod: {
     id: "pod_42",
     podNumber: 42,
-    focusArea: "Somatic Tension",
+    focusArea: "Body Tension",
     memberCount: 4,
     activeCount: 3,
     isForming: false,
     members: [
-      { id: "m1", displayName: "Sophia (Somatic)", activeToday: true, isCurrentUser: false },
+      { id: "m1", displayName: "Sophia (Body Calm)", activeToday: true, isCurrentUser: false },
       { id: "m2", displayName: "James (Social)", activeToday: true, isCurrentUser: false },
       { id: "m3", displayName: "Maya (Cognitive)", activeToday: false, isCurrentUser: false },
-      { id: "demo-user-123", displayName: "Dr. Hackathon Judge", activeToday: true, isCurrentUser: true }
+      { id: "demo-user-123", displayName: "Demo User", activeToday: true, isCurrentUser: true }
     ]
   }
 };
 
 export default function DashboardPage() {
-  const router = useRouter();
   const { user, loading: authLoading, logout } = useAuth({ redirectTo: "/login" });
   
   const [data, setData] = useState<any>(null);
@@ -118,7 +118,6 @@ export default function DashboardPage() {
   // Reflection Modal state
   const [reflectionOpen, setReflectionOpen] = useState(false);
   const [reflectionStep, setReflectionStep] = useState(1);
-  const [ratings, setRatings] = useState({ mood: 7, energy: 6, anxiety: 5, sleep: 7 });
   const [ventText, setVentText] = useState("");
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -308,6 +307,12 @@ export default function DashboardPage() {
 
   // Fetch AI end-of-day reflection questions
   const startReflection = async () => {
+    if (typeof window !== "undefined") {
+      const savedDraft = localStorage.getItem(REFLECTION_DRAFT_KEY);
+      if (savedDraft && !ventText.trim()) {
+        setVentText(savedDraft);
+      }
+    }
     setReflectionOpen(true);
     setReflectionStep(1);
     setQuestionsLoading(true);
@@ -341,6 +346,43 @@ export default function DashboardPage() {
     } finally {
       setQuestionsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (!reflectionOpen) return;
+
+    const saveDraft = () => {
+      if (typeof window === "undefined") return;
+      const draft = ventText.trim();
+      if (draft) {
+        localStorage.setItem(REFLECTION_DRAFT_KEY, ventText);
+      }
+    };
+
+    const interval = window.setInterval(saveDraft, 10000);
+    return () => {
+      saveDraft();
+      window.clearInterval(interval);
+    };
+  }, [reflectionOpen, ventText]);
+
+  const closeReflectionModal = () => {
+    const hasDraft = ventText.trim() || Object.values(answers).some((answer) => answer.trim());
+    if (!hasDraft) {
+      setReflectionOpen(false);
+      return;
+    }
+
+    const keepDraft = window.confirm("Keep your draft for later?");
+    if (keepDraft) {
+      localStorage.setItem(REFLECTION_DRAFT_KEY, ventText);
+    } else {
+      localStorage.removeItem(REFLECTION_DRAFT_KEY);
+      setVentText("");
+      setAnswers({});
+      setReflectionStep(1);
+    }
+    setReflectionOpen(false);
   };
 
   // Submit the daily reflection logs
@@ -395,11 +437,12 @@ export default function DashboardPage() {
           },
           completedActivities: [], // reset checklist
           historyLogs: [newHistoryEntry, ...(data.historyLogs || MOCK_HISTORY_LOGS)],
-          insights: `Daily reflection submitted! Based on your rated stress score of ${newScore}/10, your pacing baseline has been recalibrated to ${newScore > 6 ? "50% Decelerated" : "30% Decelerated"}.`
+          insights: "Daily reflection saved. Your next plan has been adjusted toward a gentler pace."
         };
 
         setData(updated);
         localStorage.setItem("calmpulse_demo_data", JSON.stringify(updated));
+        localStorage.removeItem(REFLECTION_DRAFT_KEY);
         
         setReflectionOpen(false);
         setSubmittingReflection(false);
@@ -426,6 +469,7 @@ export default function DashboardPage() {
       if (res.ok) {
         await fetchDashboardData();
         setReflectionOpen(false);
+        localStorage.removeItem(REFLECTION_DRAFT_KEY);
         // Reset inputs
         setVentText("");
         setAnswers({});
@@ -450,10 +494,8 @@ export default function DashboardPage() {
 
   if (!data) return null;
 
-  // Calculate completion percentage
   const totalActCount = data.activities?.length || 0;
   const completedActCount = data.completedActivities?.length || 0;
-  const activityRate = totalActCount > 0 ? Math.round((completedActCount / totalActCount) * 100) : 0;
 
   // SVG Trend Chart Dimensions
   const chartHeight = 120;
@@ -676,18 +718,18 @@ export default function DashboardPage() {
             </div>
           </GlassCard>
 
-          {/* Widget 2: Streak Counter */}
+          {/* Widget 2: Gentle continuity note */}
           <GlassCard className="p-6 shadow-sm flex flex-col justify-between h-[180px] bg-white border border-slate-200/60">
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Continuous Streak</span>
-              <Flame className="w-4.5 h-4.5 text-amber-500 fill-amber-500/10 animate-bounce-subtle" />
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Reflection Rhythm</span>
+              <Leaf className="w-4.5 h-4.5 text-teal-600" />
             </div>
             <div>
-              <span className="text-4xl font-black text-slate-900 tracking-tight block">🔥 {data.streak}</span>
-              <span className="text-[10px] font-semibold text-slate-550 block mt-1">Consecutive reflection days</span>
+              <span className="text-xl font-black text-slate-900 tracking-tight block">You came back</span>
+              <span className="text-[10px] font-semibold text-slate-550 block mt-1">Each check-in counts, even after gaps.</span>
             </div>
             <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-t border-slate-100 pt-2.5">
-              Target: Complete daily reflection
+              No daily pressure
             </div>
           </GlassCard>
 
@@ -698,15 +740,15 @@ export default function DashboardPage() {
               <CheckCircle className="w-4.5 h-4.5 text-slate-400" />
             </div>
             <div>
-              <span className="text-4xl font-black text-slate-900 tracking-tight block">{activityRate}%</span>
+              <span className="text-4xl font-black text-slate-900 tracking-tight block">{completedActCount}/{totalActCount}</span>
               <span className="text-[10px] font-semibold text-slate-550 block mt-1">
-                {completedActCount} of {totalActCount} activities completed
+                supportive actions noticed today
               </span>
             </div>
             <div className="w-full h-1.5 rounded-full bg-slate-100 overflow-hidden">
               <div 
                 className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                style={{ width: `${activityRate}%` }}
+                style={{ width: `${totalActCount > 0 ? (completedActCount / totalActCount) * 100 : 0}%` }}
               />
             </div>
           </GlassCard>
@@ -728,7 +770,7 @@ export default function DashboardPage() {
         {/* Dynamic SVG Trend Line Chart */}
         <div className="grid md:grid-cols-3 gap-8">
           
-          {/* Left panel: 7-Day Baseline anxiety score line chart */}
+          {/* Left panel: 7-day reflection trend chart */}
           <GlassCard className="p-6.5 shadow-md md:col-span-2 space-y-6 bg-white border border-slate-200/60">
             <div className="flex justify-between items-center">
               <div className="space-y-0.5">
@@ -819,30 +861,30 @@ export default function DashboardPage() {
             </div>
           </GlassCard>
 
-          {/* Right panel: Warning logs & Red Flags */}
+          {/* Right panel: Support notes */}
           <GlassCard className="p-6.5 shadow-md flex flex-col justify-between bg-white border border-slate-200/60">
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <ShieldAlert className="w-4.5 h-4.5 text-rose-500 animate-pulse" />
-                Red Flags & Risk Assessment
+                <Info className="w-4.5 h-4.5 text-slate-500" />
+                Support Notes
               </h3>
 
               <div className="space-y-3">
                 {data.redFlags && data.redFlags.length > 0 ? (
                   data.redFlags.map((flag: string, idx: number) => (
-                    <div key={idx} className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2.5">
-                      <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0" />
-                      <span className="text-[11px] font-semibold text-rose-800 leading-tight">
+                    <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-2.5">
+                      <span className="w-2 h-2 rounded-full bg-slate-400 shrink-0" />
+                      <span className="text-[11px] font-semibold text-slate-700 leading-tight">
                         {flag}
                       </span>
                     </div>
                   ))
                 ) : (
-                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-2.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-slate-400 shrink-0" />
                     <div>
-                      <span className="text-[11px] font-bold text-emerald-800 block">No Red Flags Detected</span>
-                      <span className="text-[9px] text-emerald-600 block mt-0.5">Bio-regulatory parameters are pacing stable.</span>
+                      <span className="text-[11px] font-bold text-slate-800 block">No extra support notes today</span>
+                      <span className="text-[9px] text-slate-500 block mt-0.5">Keep following the plan at a comfortable pace.</span>
                     </div>
                   </div>
                 )}
@@ -1097,7 +1139,7 @@ export default function DashboardPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-500">Stability projection:</span>
-                    <span className="font-bold text-slate-800">45% Deceleration</span>
+                    <span className="font-bold text-slate-800">Gentler pacing</span>
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-500">Estimated Days Remaining:</span>
@@ -1105,7 +1147,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-500">Adherence Factor:</span>
-                    <span className="font-bold text-emerald-600">89% High Match</span>
+                    <span className="font-bold text-emerald-600">Supportive fit</span>
                   </div>
                 </div>
                 <p className="text-[9px] text-slate-400">Based on past 7 days of bio-feedback telemetry and checklists.</p>
@@ -1159,7 +1201,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-slate-400">Step {reflectionStep} of 2</p>
               </div>
               <button
-                onClick={() => setReflectionOpen(false)}
+                onClick={closeReflectionModal}
                 className="text-slate-400 hover:text-slate-650 text-sm font-bold cursor-pointer"
               >
                 Close
@@ -1179,12 +1221,12 @@ export default function DashboardPage() {
                   onChange={(e) => setVentText(e.target.value)}
                   placeholder="Today felt a bit overwhelming during the meeting..."
                   className="w-full h-36 p-4 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-1 focus:ring-slate-900 focus:outline-none resize-none"
-                  maxLength={1000}
+                  maxLength={2000}
                 />
 
                 <div className="flex justify-between pt-4 border-t border-slate-100">
                   <button
-                    onClick={() => setReflectionOpen(false)}
+                    onClick={closeReflectionModal}
                     className="px-6 py-3 border border-slate-250 hover:bg-slate-50 rounded-xl font-bold text-xs cursor-pointer"
                   >
                     Cancel
@@ -1269,21 +1311,21 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Floating Panic Button */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* Floating calm space button */}
+      <div className="fixed bottom-6 left-6 z-40">
         <button
           onClick={() => setPanicRoomOpen(true)}
-          className="group relative flex items-center justify-center w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_20px_5px_rgba(225,29,72,0.3)] hover:shadow-[0_0_25px_10px_rgba(225,29,72,0.5)] transition-all duration-300 animate-pulse hover:scale-[1.05] cursor-pointer"
-          title="Panic SOS Button"
+          className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-teal-700 hover:bg-teal-650 text-white shadow-md transition-colors duration-300 cursor-pointer"
+          title="Open Calm Space"
         >
-          <ShieldAlert className="w-7 h-7" />
-          <span className="absolute right-full mr-3 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md border border-slate-800">
-            Panic SOS
+          <Heart className="w-6 h-6" />
+          <span className="absolute left-full ml-3 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md border border-slate-800">
+            Calm Space
           </span>
         </button>
       </div>
 
-      {/* Panic Room Modal */}
+      {/* Calm Space Modal */}
       <PanicRoomModal 
         isOpen={panicRoomOpen} 
         onClose={() => setPanicRoomOpen(false)} 

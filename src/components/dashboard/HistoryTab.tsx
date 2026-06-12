@@ -33,7 +33,7 @@ export default function HistoryTab({ history }: HistoryTabProps) {
           Pacing History Log
         </h3>
         <p className="text-[10px] text-slate-500">
-          Review your past emotional logs, recalibration scores, and habit completions.
+          Review past reflections and supportive actions without urgency.
         </p>
       </div>
 
@@ -49,13 +49,7 @@ export default function HistoryTab({ history }: HistoryTabProps) {
           history.map((entry) => {
             const isExpanded = expandedId === entry.id;
             
-            // Map scores to color themes
-            let scoreBg = "bg-emerald-50 text-emerald-800 border-emerald-200";
-            if (entry.anxietyScore >= 7) {
-              scoreBg = "bg-rose-50 text-rose-800 border-rose-200";
-            } else if (entry.anxietyScore >= 5) {
-              scoreBg = "bg-amber-50 text-amber-800 border-amber-200";
-            }
+            const scoreBg = "bg-slate-50 text-slate-700 border-slate-200";
 
             return (
               <GlassCard
@@ -81,7 +75,7 @@ export default function HistoryTab({ history }: HistoryTabProps) {
                     {/* Score Badge */}
                     <div className={`px-3 py-1 rounded-full border text-[10px] font-extrabold flex items-center gap-1 ${scoreBg}`}>
                       <Activity className="w-3.5 h-3.5" />
-                      {entry.anxietyScore.toFixed(1)}
+                      Stress noted
                     </div>
 
                     {/* Habits Completed Badge */}

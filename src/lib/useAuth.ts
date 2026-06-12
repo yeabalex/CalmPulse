@@ -32,8 +32,8 @@ export function useAuth({
         if (active) {
           setUser({
             id: "demo-user-123",
-            name: "Dr. Hackathon Judge",
-            email: "judge@hackathon.com",
+            name: "Demo User",
+            email: "demo@calmpulse.local",
             goal: "Reduce Anxiety & Regulate Sleep",
             onboardingComplete: true,
             cohortId: 42,

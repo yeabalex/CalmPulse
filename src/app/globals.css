@@ -105,6 +105,37 @@ h1, h2, h3, .font-display {
   animation: pulseRing 1.8s cubic-bezier(0.24, 0, 0.38, 1) infinite;
 }
 
+@keyframes calmBreath {
+  0% {
+    transform: scale(0.88);
+    opacity: 0.55;
+  }
+  25%, 50% {
+    transform: scale(1.55);
+    opacity: 0.82;
+  }
+  75%, 100% {
+    transform: scale(0.88);
+    opacity: 0.55;
+  }
+}
+.animate-calm-breath {
+  animation: calmBreath 16s ease-in-out infinite;
+}
+
+.text-\[8px\],
+.text-\[9px\],
+.text-\[10px\] {
+  font-size: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-calm-breath {
+    animation: none;
+    transform: scale(1.1);
+  }
+}
+
 /* Hover lift transition utility */
 .hover-lift {
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.35s cubic-bezier(0.16, 1, 0.3, 1);

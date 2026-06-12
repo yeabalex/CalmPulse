@@ -142,7 +142,7 @@ ${historyPrompt}
 
 Generate a short, empathetic response (1-3 sentences) from the perspective of the AI Companion.
 - Reference their habit progress (${completedCount}/${totalCount}) and stress level (${anxietyScore.toFixed(1)}) if contextually relevant.
-- Suggest a somatic breathing check, screen limits, or pacing stroll if they are feeling anxious.
+- Suggest a breathing check, screen limits, or pacing stroll if they are feeling anxious.
 - Do not repeat the welcome message. Keep it conversational and brief.`;
 
         const response = await generateText({
@@ -159,19 +159,19 @@ Generate a short, empathetic response (1-3 sentences) from the perspective of th
     if (!botResponse) {
       const lowerText = text.toLowerCase();
       if (lowerText.includes("hello") || lowerText.includes("hi") || lowerText.includes("hey")) {
-        botResponse = `Hello! I'm here. Looking at your records today, you have completed ${completedCount} of your ${totalCount} daily pacing plan habits, and your current stress baseline is at ${anxietyScore.toFixed(1)}/10. What is on your mind?`;
+        botResponse = `Hello! I'm here. Looking at your records today, you have checked in with ${completedCount} of your ${totalCount} daily pacing habits. What is on your mind?`;
       } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
-        botResponse = `I hear you. If you are experiencing somatic spikes, I highly recommend clicking the red SOS button in the bottom right corner to start immediate breathing guidance. Or we can practice a 4-7-8 breathing pause right here.`;
+        botResponse = `I hear you. If this feels intense, you can open Calm Space from the bottom-left button for quiet breathing and grounding. Or we can take a few slow breaths together right here.`;
       } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
         if (completedCount === 0) {
-          botResponse = `You haven't completed any pacing habits today yet. I recommend starting with the "Somatic Grounding Pause" (5m breathing break) on your checklist to help lower your ${anxietyScore.toFixed(1)} stress score.`;
+          botResponse = `You haven't checked in with a pacing habit today yet. A gentle place to start is the body calm break on your checklist.`;
         } else if (completedCount < totalCount) {
           botResponse = `You've checked off ${completedCount} pacing habits so far. Great effort! Try completing the remaining activities to satisfy today's pacing target.`;
         } else {
           botResponse = `Excellent work! You have completed all ${totalCount} pacing habits for today. Your stress baseline has been successfully decelerated.`;
         }
       } else {
-        botResponse = `Pacing is all about small, steady adjustments. Since your stress score is currently ${anxietyScore.toFixed(1)}, let's focus on setting tight boundaries on your digital notifications this evening.`;
+        botResponse = `Pacing is all about small, steady adjustments. Let's focus on setting tight boundaries on your digital notifications this evening.`;
       }
     }
 

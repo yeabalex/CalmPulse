@@ -109,10 +109,10 @@ export default function CompanionChat({ completedCount, totalCount, anxietyScore
         if (lowerText.includes("hello") || lowerText.includes("hi") || lowerText.includes("hey")) {
           botResponse = `Hello! I'm here. Looking at your records today, you have completed ${completedCount} of your ${totalCount} daily pacing plan habits, and your current stress baseline is at ${anxietyScore.toFixed(1)}/10. What is on your mind?`;
         } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
-          botResponse = `I hear you. If you are experiencing somatic spikes, I highly recommend clicking the red SOS button in the bottom right corner to start immediate breathing guidance. Or we can practice a 4-7-8 breathing pause right here.`;
+          botResponse = `I hear you. If this feels intense, you can open Calm Space from the bottom-left button for quiet breathing and grounding. Or we can take a few slow breaths together right here.`;
         } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
           if (completedCount === 0) {
-            botResponse = `You haven't completed any pacing habits today yet. I recommend starting with the "Somatic Grounding Pause" (5m breathing break) on your checklist to help lower your ${anxietyScore.toFixed(1)} stress score.`;
+            botResponse = `You haven't checked in with a pacing habit today yet. A gentle place to start is the body calm break on your checklist.`;
           } else if (completedCount < totalCount) {
             botResponse = `You've checked off ${completedCount} pacing habits so far. Great effort! Try completing the remaining activities to satisfy today's pacing target.`;
           } else {
@@ -121,9 +121,9 @@ export default function CompanionChat({ completedCount, totalCount, anxietyScore
         } else {
           // Standard conversational responses incorporating user stats
           const answers = [
-            `Pacing is all about small, steady adjustments. Since your stress score is currently ${anxietyScore.toFixed(1)}, let's focus on setting tight boundaries on your digital notifications this evening.`,
+            `Pacing is all about small, steady adjustments. Let's focus on setting tight boundaries on your digital notifications this evening.`,
             `I notice you have checked off ${completedCount}/${totalCount} habits today. How are you feeling physically? Are you experiencing any shoulder tension or chest tightness?`,
-            `That is helpful context. Remember, the goal isn't productivity—it's bio-regulatory stability. Take a step back and engage in a somatic pause if you need to.`,
+            `That is helpful context. The goal is not productivity. Take a step back and use a body calm pause if you need to.`,
             `I am keeping track of your logs. Your historical data suggests you recover faster on days when you complete your pacing strolls. Let's try to do that today.`
           ];
           botResponse = answers[Math.floor(Math.random() * answers.length)];
@@ -248,7 +248,7 @@ export default function CompanionChat({ completedCount, totalCount, anxietyScore
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Ask your coach about habits, triggers, or pacing..."
-          maxLength={500}
+          maxLength={2000}
           className="flex-1 px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:outline-none"
         />
         <button

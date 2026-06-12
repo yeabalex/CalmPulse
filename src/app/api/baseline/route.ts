@@ -25,7 +25,7 @@ const FALLBACK_REPORTS: Record<string, BaselineReport> = {
   "Social & Performance Anxiety": {
     anxietyScore: 7.4,
     subtype: "Social & Performance Anxiety",
-    symptoms: ["Performance Anticipation", "Autonomic Spikes (Racing Heart)", "Shoulder Tension", "Post-Event Cognitive Rumination"],
+    symptoms: ["Performance Worry", "Racing Heart", "Shoulder Tension", "Replaying Events"],
     pacingRate: "40% Decelerated",
     adjustments: [
       { name: "Pre-Event Screen Buffer", type: "Digital", trigger: "Turn off screens 30m prior to social events", description: "Calms your nervous system to prevent racing heart before socializing." },
@@ -35,18 +35,18 @@ const FALLBACK_REPORTS: Record<string, BaselineReport> = {
     cohortId: 42,
     cohortDescription: "Social and Performance anxiety cohort pod. Focuses on pre-event breathing buffers and post-event cognitive declutter milestones."
   },
-  "Generalized Tension & Panic": {
+  "Generalized Tension": {
     anxietyScore: 8.2,
-    subtype: "Generalized Tension & Panic",
-    symptoms: ["Somatic Restlessness", "Breathing dysregulation (Shallow)", "Jaw Clenching", "Sudden Panic Waves"],
+    subtype: "Generalized Tension",
+    symptoms: ["Body Restlessness", "Shallow Breathing", "Jaw Clenching", "Sudden Stress Waves"],
     pacingRate: "50% Decelerated",
     adjustments: [
-      { name: "Breathing Pacer (4-7-8)", type: "Somatic", trigger: "Trigger breathing break automatically every 3 hours", description: "Slows your breathing to signal safety to your body." },
-      { name: "Cold Sensory Grounding", type: "Sensory", trigger: "Apply cold water or ice pack on panic spike warnings", description: "Instantly slows down a racing heart with a cold splash." },
-      { name: "Autonomic Pacing Breaks", type: "Interval", trigger: "Take 5m screen-free rest every 60m of continuous activity", description: "Relieves muscle tension and stops stress from building up." }
+      { name: "Breathing Break", type: "Body Calm", trigger: "Take a breathing break every 3 hours", description: "Slows your breathing to signal safety to your body." },
+      { name: "Cool Water Grounding", type: "Sensory", trigger: "Use cool water or an ice pack during stress waves", description: "Helps your body shift out of alarm." },
+      { name: "Screen-Free Pacing Breaks", type: "Interval", trigger: "Take 5m screen-free rest every 60m of continuous activity", description: "Relieves muscle tension and stops stress from building up." }
     ],
     cohortId: 108,
-    cohortDescription: "Generalized tension pod. Focusing on autonomic regulation, physical grounding checks, and panic cooldown workflows."
+    cohortDescription: "Generalized tension pod. Focuses on body calm checks, physical grounding, and stress cooldown routines."
   },
   "Burnout & Attention Fatigue": {
     anxietyScore: 6.8,
@@ -69,7 +69,7 @@ const DEFAULT_REPORT = {
   symptoms: ["Mental Fatigue", "Muscle Tension", "Stress Response"],
   pacingRate: "35% Decelerated",
   adjustments: [
-    { name: "Mindful Pacing Pause", type: "Somatic", trigger: "Take a 5m breathing pause every 3 hours", description: "Lets you check in with your body to keep stress low." },
+    { name: "Mindful Pacing Pause", type: "Body Calm", trigger: "Take a 5m breathing pause every 3 hours", description: "Lets you check in with your body to keep stress low." },
     { name: "Evening Digital Boundary", type: "Digital", trigger: "Disconnect screens 60m before sleeping", description: "Prepares your brain for sleep by keeping screens away." }
   ],
   cohortId: 15,
@@ -107,9 +107,9 @@ export async function POST(req: Request) {
     });
 
     const CALMPULSE_PRIOR_KNOWLEDGE = `
-CalmPulse Clinical Pacing Methodology:
+CalmPulse gentle pacing method:
 1. Social & Performance Anxiety: Structured cognitive pacing prior to events, caffeine restrictions (4 hours buffer before triggers), and post-stressor grounding intervals. Focused on "Social Receptive Index".
-2. Generalized Tension & Panic: Somatic monitoring, vagus nerve breathing pacers (e.g. 4-7-8 cycles), cold-water sensory grounding, and interval breaks (5m screen-free rest every 60m of continuous activity). Focused on "Hyper-Arousal Hyper-Pacing" model.
+2. Generalized Tension: body calm checks, slow breathing breaks, cool-water grounding, and interval breaks (5m screen-free rest every 60m of continuous activity).
 3. Burnout & Attention Fatigue: Digital boundary buffers (disable screen syncs after 9:30 PM), structured workflow intervals (50-10 work-rest cycles), and mid-day physical activation stretches. Focused on "Cognitive Load Recovery" model.
 `;
 
@@ -126,12 +126,12 @@ Construct a detailed, structured diagnostic baseline report based on their input
 Calculate the following parameters:
 1. anxietyScore: A decimal number between 1.0 and 10.0 indicating their subjective anxiety severity.
 2. subtype: The matched anxiety subtype (use "${focusArea}").
-3. symptoms: A list of 4 key cognitive/somatic symptoms identified from their responses.
+3. symptoms: A list of 4 key thoughts or body sensations identified from their responses.
 4. pacingRate: A percentage decelerated pacing target (e.g., "45% Decelerated").
 5. adjustments: An array of 3 custom behavioral habit adjustments matching the CalmPulse pacing guidelines for this subtype. Each adjustment should have:
    - "name": the habit name.
-   - "type": the type (e.g., Somatic, Digital, Workflow, Dietary).
-   - "trigger": the explicit schedule/condition (e.g. "Splash cold water on face upon sensing panic").
+   - "type": the type (e.g., Body Calm, Digital, Workflow, Dietary).
+   - "trigger": the explicit schedule/condition (e.g. "Use cool water when stress rises").
    - "description": a short explanation in simple, easy-to-understand words (max 12 words) of how it physically calms the body or helps the nervous system.
 6. cohortId: A random integer between 10 and 150.
 7. cohortDescription: A 2-sentence description of an anonymous cohort group of 5-8 peers facing similar symptoms and pacing goals.
@@ -140,11 +140,11 @@ Return ONLY a JSON object containing the report. Do not include markdown code bl
 Example format:
 {
   "anxietyScore": 7.5,
-  "subtype": "Generalized Tension & Panic",
-  "symptoms": ["Somatic restlessness", "Jaw clenching"],
+  "subtype": "Generalized Tension",
+  "symptoms": ["Body restlessness", "Jaw clenching"],
   "pacingRate": "45% Decelerated",
   "adjustments": [
-    { "name": "Breathing break", "type": "Somatic", "trigger": "Triggered every 3 hours", "description": "Slows breathing to calm body." }
+    { "name": "Breathing break", "type": "Body Calm", "trigger": "Every 3 hours", "description": "Slows breathing to calm body." }
   ],
   "cohortId": 42,
   "cohortDescription": "Cohort description here."

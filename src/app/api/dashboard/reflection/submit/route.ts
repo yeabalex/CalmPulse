@@ -75,16 +75,16 @@ export async function POST(req: Request) {
 
       // Heuristic Pacing Updates
       if (anxiety > 7) {
-        aiInsights = "Somatic warnings detected. We have added a critical cooling activity: Cold-water vagus nerve stimulation on panic triggers.";
+        aiInsights = "A stronger stress wave showed up today, so we added a cool-water grounding activity.";
         const hasTriggerTask = updatedActivities.some((a: any) => a.id === "ai_trigger_panic");
         if (!hasTriggerTask) {
           updatedActivities = [
             ...updatedActivities,
-            { id: "ai_trigger_panic", name: "Cold sensory grounding on stress spikes", type: "Somatic", enabled: true, source: "ai" }
+            { id: "ai_trigger_panic", name: "Cool-water grounding during stress waves", type: "Body Calm", enabled: true, source: "ai" }
           ];
         }
       } else {
-        aiInsights = "Your bio-regulation indicators are stabilizing nicely. Pacing intensity adjusted down by 5%. Focus on physical grounding walk.";
+        aiInsights = "Your check-in looks steadier today. Keep the pacing walk gentle and manageable.";
       }
     } else {
       // Query Groq to recalculate pacing parameters

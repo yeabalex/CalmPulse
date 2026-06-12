@@ -42,7 +42,7 @@ export async function GET(req: Request) {
       const focusArea = user.focusArea || "General";
       const report = user.calculatedReport || {};
       
-      const somaticName = report.adjustments?.[0]?.name || "Somatic Breathing Pause";
+      const somaticName = report.adjustments?.[0]?.name || "Body Calm Breathing Pause";
       const somaticTrigger = report.adjustments?.[0]?.trigger || "Take a 5m pause every 3 hours";
       
       const digitalName = report.adjustments?.[1]?.name || "Screen Detach Boundary";
@@ -50,23 +50,23 @@ export async function GET(req: Request) {
 
       if (focusArea === "Social & Performance Anxiety") {
         activitiesList = [
-          { id: "act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Somatic", description: "Stimulates the vagus nerve to slow down racing heartbeat pre-events.", enabled: true },
-          { id: "act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Quiets autonomic nervous system stimulation to improve pre-sleep transition.", enabled: true },
-          { id: "act_3", name: "Caffeine limit: No caffeine 4 hours before speaking stress", type: "Dietary", description: "Controls background adrenaline thresholds to keep somatic panic markers low.", enabled: true },
-          { id: "act_4", name: "Grounding stretch: 5m chest expansion stretches before meetings", type: "Physical", description: "Opens up posture and breathing pathways to mitigate hyper-arousal.", enabled: true },
+          { id: "act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Body Calm", description: "Uses slow breathing to ease a racing heartbeat before events.", enabled: true },
+          { id: "act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Quiets evening stimulation to support sleep.", enabled: true },
+          { id: "act_3", name: "Caffeine limit: No caffeine 4 hours before speaking stress", type: "Dietary", description: "Helps prevent caffeine from mimicking stress symptoms.", enabled: true },
+          { id: "act_4", name: "Grounding stretch: 5m chest expansion stretches before meetings", type: "Physical", description: "Opens posture and breathing before hard moments.", enabled: true },
           { id: "act_5", name: "Post-event journaling: Write 3 positive outcomes after stressors", type: "Journaling", description: "Trains cognitive pathways to focus on positive reality anchors.", enabled: true }
         ];
-      } else if (focusArea === "Generalized Tension & Panic") {
+      } else if (focusArea === "Generalized Tension" || focusArea === "Generalized Tension & Panic") {
         activitiesList = [
-          { id: "act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Somatic", description: "Downregulates baseline autonomic tension and balances breath pace.", enabled: true },
-          { id: "act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Restricts blue light to allow natural sleep architecture activation.", enabled: true },
-          { id: "act_3", name: "Autonomic transition: 5m screen-free rest every 60m of computer work", type: "Interval", description: "Resets neurological sensory accumulation and posturing stress.", enabled: true },
-          { id: "act_4", name: "Vagus nerve cooldown: 4-7-8 breathing session on tightness signs", type: "Somatic", description: "Activates parasympathetic brake to quickly reduce sudden panic signals.", enabled: true },
-          { id: "act_5", name: "Sensory cold shock: Apply cold pack to chest on heart rate warnings", type: "Sensory", description: "Uses temperature transition to override autonomic hyper-arousal spikes.", enabled: true }
+          { id: "act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Body Calm", description: "Uses breathing pace to help the body settle.", enabled: true },
+          { id: "act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Supports a calmer transition into sleep.", enabled: true },
+          { id: "act_3", name: "Screen-free transition: 5m rest every 60m of computer work", type: "Interval", description: "Gives your senses and posture a reset.", enabled: true },
+          { id: "act_4", name: "Breathing cooldown: slow breaths when tightness appears", type: "Body Calm", description: "Helps reduce sudden stress signals.", enabled: true },
+          { id: "act_5", name: "Cool grounding: Apply a cool pack during racing-heart moments", type: "Sensory", description: "Uses temperature to help your body shift gears.", enabled: true }
         ];
       } else if (focusArea === "Burnout & Attention Fatigue") {
         activitiesList = [
-          { id: "act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Somatic", description: "Re-oxygenates brain cells to mitigate physical mental sluggishness.", enabled: true },
+          { id: "act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Body Calm", description: "Refreshes attention with a short breathing reset.", enabled: true },
           { id: "act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Establishes a strict offline boundary to clear screen-induced stress.", enabled: true },
           { id: "act_3", name: "Focus pace: Strict 10m offline walk every 50m of coding", type: "Workflow", description: "Protects attention reserves by preventing prolonged visual strain.", enabled: true },
           { id: "act_4", name: "Physical re-activation: Do a 5m stretch sequence at 2:00 PM", type: "Physical", description: "Stimulates full-body circulation to counter mid-day concentration drop.", enabled: true },
@@ -74,11 +74,11 @@ export async function GET(req: Request) {
         ];
       } else {
         activitiesList = [
-          { id: "act_1", name: "Somatic breathing pause: 5m slow breaths every 4 hours", type: "Somatic", description: "Maintains regular bio-regulatory breathing cycles.", enabled: true },
+          { id: "act_1", name: "Body calm breathing pause: 5m slow breaths every 4 hours", type: "Body Calm", description: "Keeps breathing breaks easy to remember.", enabled: true },
           { id: "act_2", name: "Digital Detach: Disconnect screens after 9:30 PM", type: "Digital", description: "Allows full pre-sleep decompression and melatonin release.", enabled: true },
           { id: "act_3", name: "Workflow pacing: Take a 10m off-screen rest every 2 hours", type: "Workflow", description: "Restores sensory focus by interrupting continuous task pressure.", enabled: true },
           { id: "act_4", name: "Gratitude reflection: Note 3 positive anchors at end of day", type: "Journaling", description: "Re-calibrates emotional perspective before heading to sleep.", enabled: true },
-          { id: "act_5", name: "Vagus nerve activation: Do 5m humming breathing in the morning", type: "Somatic", description: "Vibrational somatic check-in to establish early vagal balance.", enabled: true }
+          { id: "act_5", name: "Morning humming breath: Do 5m in the morning", type: "Body Calm", description: "A gentle body check-in to start the day.", enabled: true }
         ];
       }
       
@@ -154,11 +154,11 @@ export async function GET(req: Request) {
       pod = await getPodSummary(db, podObjectId, userId);
     }
 
-    // 4. Seeding Default Achievements
+    // 4. Seeding gentle acknowledgements
     const achievements = [
-      { id: "ach_onb", title: "Milestone Sync", desc: "Successfully aligned with an anonymous peer pod.", unlocked: true },
-      { id: "ach_streak", title: "Habit Anchor", desc: "Maintained a continuous daily check-in streak.", unlocked: diffDays > 3 },
-      { id: "ach_intake", title: "Venting Release", desc: "Expressed emotional symptoms via raw baseline logs.", unlocked: true }
+      { id: "ach_onb", title: "Found Your Pod", desc: "Joined an anonymous peer support group.", unlocked: true },
+      { id: "ach_returned", title: "Returned to Reflection", desc: "Made time to check in with yourself.", unlocked: diffDays > 3 },
+      { id: "ach_intake", title: "Shared What Was Here", desc: "Put your experience into words.", unlocked: true }
     ];
 
     // 5. Seeding Default Insights & Warnings
