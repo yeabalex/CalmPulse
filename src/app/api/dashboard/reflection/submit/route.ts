@@ -5,8 +5,18 @@ import { createOpenAI } from "@ai-sdk/openai";
 import { generateText } from "ai";
 import { applyRateLimit } from "@/lib/rateLimit";
 import { getGroqApiKey } from "@/lib/ai";
+import { updateWellnessHistoryMemory } from "@/lib/companionMemory";
+import type { Document } from "mongodb";
 
 export const runtime = "nodejs";
+
+interface PacingActivity {
+  id?: string;
+  name?: string;
+  type?: string;
+  enabled?: boolean;
+  source?: string;
+}
 
 export async function POST(req: Request) {
   const limited = applyRateLimit(req, {
@@ -53,7 +63,7 @@ export async function POST(req: Request) {
     let baselineScore = anxiety; // default fallback
     let aiInsights = "Your daily log has been saved. Try checking off more activities tomorrow to accelerate your pacing score!";
     let redFlags: string[] = [];
-    let updatedActivities = user.activities || [];
+    let updatedActivities: PacingActivity[] = Array.isArray(user.activities) ? user.activities : [];
 
     // Simple mock heuristic calculations if API key is missing
     if (!apiKey) {
@@ -76,7 +86,7 @@ export async function POST(req: Request) {
       // Heuristic Pacing Updates
       if (anxiety > 7) {
         aiInsights = "A stronger stress wave showed up today, so we added a cool-water grounding activity.";
-        const hasTriggerTask = updatedActivities.some((a: any) => a.id === "ai_trigger_panic");
+        const hasTriggerTask = updatedActivities.some((activity) => activity.id === "ai_trigger_panic");
         if (!hasTriggerTask) {
           updatedActivities = [
             ...updatedActivities,
@@ -150,7 +160,7 @@ Ensure the output is pure JSON. Do not include markdown code block formatting or
         if (result.baselineScore !== undefined) baselineScore = result.baselineScore;
         if (result.aiInsights) aiInsights = result.aiInsights;
         if (result.redFlags) redFlags = result.redFlags;
-        if (result.updatedActivities) updatedActivities = result.updatedActivities;
+        if (Array.isArray(result.updatedActivities)) updatedActivities = result.updatedActivities;
       } catch (err) {
         console.error("Failed to parse Groq reflection analysis, falling back to heuristics:", err);
       }
@@ -168,7 +178,11 @@ Ensure the output is pure JSON. Do not include markdown code block formatting or
       baselineScore,
       aiInsights,
       redFlags,
-      completedCount: completedList.length
+      completedCount: completedList.length,
+      completedActivityIds: completedList,
+      completedActivities: ((user.activities || []) as PacingActivity[])
+        .filter((activity) => activity.id && completedList.includes(activity.id))
+        .map((activity) => ({ id: activity.id, name: activity.name, type: activity.type }))
     };
 
     // Calculate Streak
@@ -188,18 +202,22 @@ Ensure the output is pure JSON. Do not include markdown code block formatting or
     }
 
     // Save permanently in MongoDB
+    const updateDoc: Document = {
+      $push: { dailyLogs: newLog },
+      $set: {
+        streak: newStreak,
+        activities: updatedActivities,
+        completedActivities: [], // Reset for next day
+        lastActiveDate: todayStr
+      }
+    };
+
     await db.collection("users").updateOne(
       { _id: userId },
-      {
-        $push: { dailyLogs: newLog },
-        $set: {
-          streak: newStreak,
-          activities: updatedActivities,
-          completedActivities: [], // Reset for next day
-          lastActiveDate: todayStr
-        }
-      } as any
+      updateDoc
     );
+
+    await updateWellnessHistoryMemory(db, userId, [...(user.dailyLogs || []), newLog]);
 
     return NextResponse.json({
       success: true,
@@ -208,10 +226,11 @@ Ensure the output is pure JSON. Do not include markdown code block formatting or
       streak: newStreak,
       activities: updatedActivities
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in reflection submit API:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Internal Server Error", details: error.message },
+      { error: "Internal Server Error", details: message },
       { status: 500 }
     );
   }
