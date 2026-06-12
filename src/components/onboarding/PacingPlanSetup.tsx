@@ -54,7 +54,7 @@ function parseValueFromTrigger(trigger: string, type: string): {
       }
       return { controlType: "time", value: "21:30" };
     }
-  } else if (type === "Somatic" || type === "Interval" || type === "Sensory") {
+  } else if (type === "Somatic" || type === "Body Calm" || type === "Interval" || type === "Sensory") {
     const numMatch = trigger.match(/(\d+)/);
     const val = numMatch ? numMatch[1] : "3";
     return {
@@ -105,8 +105,8 @@ export default function PacingPlanSetup({ onSubmit, initialAdjustments }: Pacing
       },
       {
         id: "h2",
-        name: "Somatic Breathing Pause",
-        type: "Somatic",
+        name: "Body Calm Breathing Pause",
+        type: "Body Calm",
         value: "3", // hours
         controlType: "interval",
         enabled: true,
@@ -147,7 +147,7 @@ export default function PacingPlanSetup({ onSubmit, initialAdjustments }: Pacing
           Customize Your Pacing Reminders
         </h2>
         <p className="text-xs text-slate-500 max-w-md mx-auto">
-          We have generated your custom pacing baseline parameters. Feel free to tweak these trigger times and intervals to fit your schedule.
+          We have made a gentle reminder plan. Adjust the times so they fit your day.
         </p>
       </div>
 
@@ -170,10 +170,10 @@ export default function PacingPlanSetup({ onSubmit, initialAdjustments }: Pacing
                   </div>
                   <p className="text-xs text-slate-500">
                     {habit.id === "h1"
-                      ? "Core autonomic stabilizer required for baseline recalibration."
+                      ? "A steady anchor to help your body settle."
                       : habit.id === "h2"
-                      ? "Vagus nerve stimulation to reduce somatic tension."
-                      : "Controls biological adrenaline build-up."}
+                      ? "A simple breathing break for body tension."
+                      : "Helps reduce stress build-up before harder moments."}
                   </p>
                 </div>
 

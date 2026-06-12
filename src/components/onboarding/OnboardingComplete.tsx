@@ -47,13 +47,10 @@ export default function OnboardingComplete({ cohortId, assessment }: OnboardingC
       .catch(() => {});
   }, []);
   
-  // Real pacing rate
   const pacingRate = report?.pacingRate || "35% Decelerated";
   
-  // Real somatic tension score
   const tensionScore = report?.anxietyScore || 7.0;
   
-  // Somatic tension status
   let tensionStatus = "Stable";
   if (tensionScore >= 8) {
     tensionStatus = "Elevated";
@@ -105,17 +102,17 @@ export default function OnboardingComplete({ cohortId, assessment }: OnboardingC
           <div className="border-t border-slate-100 pt-3 text-[11px] text-slate-500 leading-relaxed space-y-2">
             <p className="font-bold text-slate-800">What does this mean?</p>
             <p>
-              This is your nervous system deceleration target. It represents how much you need to slow down your daily workflow/activity cycles and build in somatic pauses to prevent stress accumulation and restore autonomic balance.
+              This is your suggested slower pace for the next few days. It helps you add breathing and rest pauses before stress builds up.
             </p>
           </div>
         </GlassCard>
 
-        {/* Somatic Telemetry Card */}
+        {/* Body check card */}
         <GlassCard className="shadow-sm space-y-4 flex flex-col justify-between">
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">
-                Somatic Telemetry
+                Body Check
               </span>
               <span className="w-2.5 h-2.5 rounded-full bg-slate-900/10" />
             </div>
@@ -126,10 +123,10 @@ export default function OnboardingComplete({ cohortId, assessment }: OnboardingC
               </div>
               <div>
                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Somatic Tension Baseline
+                  Tension Baseline
                 </span>
                 <span className="text-base font-extrabold text-slate-900 block leading-tight">
-                  {tensionStatus} <span className="text-[10px] font-normal text-slate-500">({tensionScore}/10)</span>
+                  {tensionStatus}
                 </span>
               </div>
             </div>
@@ -138,7 +135,7 @@ export default function OnboardingComplete({ cohortId, assessment }: OnboardingC
           <div className="border-t border-slate-100 pt-3 text-[11px] text-slate-500 leading-relaxed space-y-2">
             <p className="font-bold text-slate-800">What does this mean?</p>
             <p>
-              This is your subjective anxiety and nervous system tension score calculated from your intake symptoms and expressive vent logs. The app uses this baseline to personalize your pacing schedule.
+              This comes from your intake notes and helps personalize your pacing schedule without turning it into a score to chase.
             </p>
           </div>
         </GlassCard>

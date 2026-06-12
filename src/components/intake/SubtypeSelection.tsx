@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquare, ShieldAlert, Sparkles } from "lucide-react";
+import { Heart, MessageSquare, Sparkles } from "lucide-react";
 
 interface SubtypeSelectionProps {
   onSelect: (subtype: string) => void;
@@ -15,10 +15,10 @@ export default function SubtypeSelection({ onSelect }: SubtypeSelectionProps) {
       accent: "bg-blue-50 border-blue-200 text-blue-700"
     },
     {
-      title: "Generalized Tension & Panic",
-      desc: "Frequent physical restlessness, breathing rate spikes, muscle tension (jaw/shoulders), and sudden waves of panic.",
-      icon: ShieldAlert,
-      accent: "bg-rose-50 border-rose-200 text-rose-700"
+      title: "Generalized Tension",
+      desc: "Frequent physical restlessness, faster breathing, muscle tension (jaw/shoulders), and sudden stress waves.",
+      icon: Heart,
+      accent: "bg-teal-50 border-teal-200 text-teal-700"
     },
     {
       title: "Burnout & Attention Fatigue",
@@ -35,7 +35,7 @@ export default function SubtypeSelection({ onSelect }: SubtypeSelectionProps) {
           What area of focus fits your experience?
         </h2>
         <p className="text-sm text-slate-605 max-w-xl">
-          Select the anxiety subtype that feels closest to your current struggles. We will customize your behavioral pacing schedule accordingly.
+          Select the focus area that feels closest to your current struggles. We will customize your pacing schedule accordingly.
         </p>
       </div>
 
@@ -60,7 +60,7 @@ export default function SubtypeSelection({ onSelect }: SubtypeSelectionProps) {
             </div>
 
             <div className="mt-4 flex items-center text-xs font-bold text-slate-700 group-hover:text-slate-900 gap-1.5 pt-2 border-t border-slate-100">
-              Select Subtype
+              Select Focus
               <span className="group-hover:translate-x-1 transition-transform">→</span>
             </div>
           </button>

@@ -7,15 +7,15 @@ export default function PacingPlans() {
   const plans = [
     {
       title: "Social & Performance Anxiety",
-      desc: "Calibrated to buffer pre-event performance stress. Implements structured audio-guidance sessions, strict pre-meeting caffeine boundaries, and post-stressor cognitive declutter habits.",
-      metricName: "Anxiety Subtype",
-      metricValue: "High Social Receptive Index"
+      desc: "Built for pre-event stress. Uses audio guidance, caffeine boundaries before meetings, and short reflection habits after hard moments.",
+      metricName: "Focus Area",
+      metricValue: "Social Stress"
     },
     {
-      title: "Generalized Tension & Panic",
-      desc: "Designed to regulate autonomic nervous system spikes. Uses high-frequency somatic grounding reminders, immediate pacing interventions, and custom-calibrated breathing cycles.",
-      metricName: "Somatic Model",
-      metricValue: "Hyper-Arousal Hyper-Pacing"
+      title: "Generalized Tension",
+      desc: "Designed for body tension and sudden stress waves. Uses grounding reminders, calm-space tools, and breathing breaks.",
+      metricName: "Support Style",
+      metricValue: "Body Calm"
     },
     {
       title: "Burnout & Attention Fatigue",
@@ -33,14 +33,14 @@ export default function PacingPlans() {
             Specialized Pacing Plans
           </h2>
           <p className="text-slate-650 max-w-md text-sm">
-            Behavioral pacing loops calibrated specifically to address different cognitive and somatic anxiety subtypes.
+            Gentle pacing plans shaped around different stress patterns.
           </p>
         </div>
         <Link
           href="/intake"
           className="group inline-flex items-center gap-2 px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-full transition-all duration-300 text-xs shadow-md shadow-slate-900/10"
         >
-          Assess Your Subtype
+          Find Your Focus
           <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
         </Link>
       </div>

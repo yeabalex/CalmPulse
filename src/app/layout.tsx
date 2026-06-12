@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
+import ThemeToggle from "@/components/ThemeToggle";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -39,6 +40,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-white text-[#0f172a] dark:bg-[#03070c] dark:text-[#f8fafc]">
         {children}
+        <ThemeToggle />
         
         {/* Client-side PWA service worker registration */}
         <Script

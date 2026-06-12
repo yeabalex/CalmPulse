@@ -20,7 +20,7 @@ async function generateInitialActivities(
 
   if (!apiKey) {
     // Heuristic fallbacks customized by Focus Area
-    const somaticName = report?.adjustments?.[0]?.name || "Somatic Breathing Pause (4-7-8)";
+    const somaticName = report?.adjustments?.[0]?.name || "Body Calm Breathing Pause";
     const somaticTrigger = report?.adjustments?.[0]?.trigger || "Take a 5m breathing pause every 3 hours";
     
     const digitalName = report?.adjustments?.[1]?.name || "Digital Screen Detach Boundary";
@@ -28,23 +28,23 @@ async function generateInitialActivities(
 
     if (focusArea === "Social & Performance Anxiety") {
       return [
-        { id: "ai_act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Somatic", description: "Stimulate your vagus nerve to slow down sudden heart rate spikes before/after stress.", enabled: true, source: "ai" },
-        { id: "ai_act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Decelerate cognitive arousal and restore natural pre-sleep hormone rhythms.", enabled: true, source: "ai" },
-        { id: "ai_act_3", name: "Caffeine restriction: Zero caffeine intake 4 hours before triggers", type: "Dietary", description: "Prevent artificial adrenaline spikes that mimic and trigger panic responses.", enabled: true, source: "ai" },
-        { id: "ai_act_4", name: "Post-event grounding: Listen to 5m auditory release after meetings", type: "Auditory", description: "Decompress cognitive tension and quiet recursive self-critical thoughts.", enabled: true, source: "ai" },
+        { id: "ai_act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Body Calm", description: "Uses slow breathing to ease a racing heartbeat before or after stress.", enabled: true, source: "ai" },
+        { id: "ai_act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Gives your mind a quieter path into sleep.", enabled: true, source: "ai" },
+        { id: "ai_act_3", name: "Caffeine restriction: Zero caffeine intake 4 hours before triggers", type: "Dietary", description: "Helps prevent caffeine from mimicking stress symptoms.", enabled: true, source: "ai" },
+        { id: "ai_act_4", name: "Post-event grounding: Listen to 5m calming audio after meetings", type: "Auditory", description: "Eases replaying thoughts after hard moments.", enabled: true, source: "ai" },
         { id: "ai_act_5", name: "Pre-stressor focus: Do 3m mindful breathing in room before events", type: "Mindfulness", description: "Anchor attention in physical space to suppress anticipation loops.", enabled: true, source: "ai" }
       ];
-    } else if (focusArea === "Generalized Tension & Panic") {
+    } else if (focusArea === "Generalized Tension" || focusArea === "Generalized Tension & Panic") {
       return [
-        { id: "ai_act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Somatic", description: "Trigger parasympathetic vagus nerve tone to lower muscle tension and panic responses.", enabled: true, source: "ai" },
-        { id: "ai_act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Establish a clear off-grid boundary to ease autonomic restlessness at night.", enabled: true, source: "ai" },
-        { id: "ai_act_3", name: "Vagus nerve cooldown: 4-7-8 breathing cycles during tension spikes", type: "Somatic", description: "Rapid somatic grounding designed to downregulate hyper-arousal signals.", enabled: true, source: "ai" },
-        { id: "ai_act_4", name: "Cold sensory shock: Splash cold water or apply ice on panic spikes", type: "Sensory", description: "Activate mammalian dive reflex to immediately decelerate heart rate spikes.", enabled: true, source: "ai" },
-        { id: "ai_act_5", name: "Autonomic Pacing: 5m screen-free rest every 60m of continuous desk work", type: "Interval", description: "Prevent somatic load build-up by breaking prolonged cognitive loops.", enabled: true, source: "ai" }
+        { id: "ai_act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Body Calm", description: "Uses slow breathing to lower body tension.", enabled: true, source: "ai" },
+        { id: "ai_act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Creates a clear evening boundary to ease restlessness.", enabled: true, source: "ai" },
+        { id: "ai_act_3", name: "Breathing cooldown: slow breaths during tension waves", type: "Body Calm", description: "A quick grounding step for rising stress.", enabled: true, source: "ai" },
+        { id: "ai_act_4", name: "Cool grounding: Splash cool water or hold ice during stress waves", type: "Sensory", description: "Uses temperature to help your body shift gears.", enabled: true, source: "ai" },
+        { id: "ai_act_5", name: "Screen-free rest: 5m every 60m of continuous desk work", type: "Interval", description: "Breaks long focus loops before stress builds.", enabled: true, source: "ai" }
       ];
     } else if (focusArea === "Burnout & Attention Fatigue") {
       return [
-        { id: "ai_act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Somatic", description: "Restore oxygenation and relieve static posture-induced attention fatigue.", enabled: true, source: "ai" },
+        { id: "ai_act_1", name: `${somaticName}: ${somaticTrigger}`, type: "Body Calm", description: "Refreshes attention with a short breathing reset.", enabled: true, source: "ai" },
         { id: "ai_act_2", name: `${digitalName}: ${digitalTrigger}`, type: "Digital", description: "Provide a neurological transition boundary to support sleep cycle entry.", enabled: true, source: "ai" },
         { id: "ai_act_3", name: "Focus-Rest split: Strict 10m off-screen break every 50m of work", type: "Workflow", description: "Prevent neural burnout and eye fatigue by enforcing interval recovery.", enabled: true, source: "ai" },
         { id: "ai_act_4", name: "Physical re-activation: Do 5m full body stretch routine at 2:00 PM", type: "Physical", description: "Re-engage circulation and break physical fatigue loops mid-afternoon.", enabled: true, source: "ai" },
@@ -54,7 +54,7 @@ async function generateInitialActivities(
 
     // Default stress management
     return [
-      { id: "ai_act_1", name: "Somatic Breathing: 5m breathing check-in every 4 hours", type: "Somatic", description: "Align breath rhythm with autonomic balance checkpoints.", enabled: true, source: "ai" },
+      { id: "ai_act_1", name: "Body Calm Breathing: 5m check-in every 4 hours", type: "Body Calm", description: "Keeps breathing breaks easy to remember.", enabled: true, source: "ai" },
       { id: "ai_act_2", name: "Digital Detach: Disconnect all screen syncs after 9:30 PM", type: "Digital", description: "Support biological melatonin release to improve deep sleep.", enabled: true, source: "ai" },
       { id: "ai_act_3", name: "Mindful Pacing Pause: Take a 5m reflection walk after lunch", type: "Workflow", description: "Ease mid-day stress accumulation through gentle physical pacing.", enabled: true, source: "ai" },
       { id: "ai_act_4", name: "Gratitude note: List 3 things that grounded you today", type: "Journaling", description: "Re-anchor emotional focus on positive somatic experiences.", enabled: true, source: "ai" },
@@ -69,12 +69,12 @@ async function generateInitialActivities(
       apiKey: apiKey,
     });
 
-    const prompt = `You are a clinical AI diagnostic pacer for CalmPulse.
+    const prompt = `You are a plain-language pacing assistant for CalmPulse.
 Generate a personalized daily pacing plan consisting of exactly 5 custom activities/habits for a user based on their goals and history.
 
 USER METRICS:
 - Selected Goal: "${goal}"
-- Anxiety Subtype: "${focusArea}"
+- Focus Area: "${focusArea}"
 - Intake Symptoms: ${JSON.stringify(report?.symptoms || [])}
 - Intake Vent: "${ventText || "None"}"
 - Baseline recommended adjustments: ${JSON.stringify(report?.adjustments || [])}
@@ -82,8 +82,8 @@ USER METRICS:
 Generate exactly 5 specific pacing activities. Each activity must have:
 1. id: a string (e.g. "ai_act_1", "ai_act_2")
 2. name: a clear description of the action and the specific trigger or time to do it (e.g. "Cold water splash: Splash cold water on face upon sensing jaw clenching triggers")
-3. type: the type of activity (e.g. Somatic, Digital, Mindfulness, Physical, Sleep, Dietary, Workflow, Focus)
-4. description: a short one-sentence explanation of why they are doing this activity somatic-wise or how it helps (e.g. "Stimulates the vagus nerve to immediately slow down heart rate and lower tension spikes.")
+3. type: the type of activity (e.g. Body Calm, Digital, Mindfulness, Physical, Sleep, Dietary, Workflow, Focus)
+4. description: a short one-sentence explanation in plain language of how it helps (e.g. "Slows breathing and helps the body settle.")
 5. enabled: true
 6. source: "ai"
 

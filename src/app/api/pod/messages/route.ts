@@ -117,7 +117,7 @@ export async function POST(req: Request) {
     await db.collection("companion_messages").insertOne(userDoc);
 
     const memory = await buildCompanionMemory(db, userId);
-    const { completedCount, totalCount, anxietyScore } = memory;
+    const { completedCount, totalCount } = memory;
 
     const apiKey = getGroqApiKey();
     let botResponse = "";
@@ -178,23 +178,21 @@ Write the companion's next reply.`;
 
     // Fallback response if AI fails or no apiKey
     if (!botResponse) {
+      const lowerText = text.toLowerCase();
       if (containsGreeting(text)) {
         botResponse = "Hello, I'm here with you. What feels most important to talk through right now?";
-      } else {
-        const lowerText = text.toLowerCase();
-        if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
-          botResponse = "I hear you. Try one slow 4-7-8 breathing cycle with me now, and if this feels urgent or unsafe, use local emergency support or the SOS button for immediate grounding.";
-        } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
-          if (completedCount === 0) {
-            botResponse = `Start with one small reset: the "Somatic Grounding Pause" on your checklist is a good first step. Keep it simple and do just that before deciding on the next task.`;
-          } else if (completedCount < totalCount) {
-            botResponse = `You've completed ${completedCount} of ${totalCount} pacing habits today. Pick the easiest remaining one next so the plan keeps moving without adding pressure.`;
-          } else {
-            botResponse = `You've completed all ${totalCount} pacing habits today. Let the rest of the day be maintenance: lower stimulation, keep transitions gentle, and avoid adding extra obligations.`;
-          }
+      } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
+        botResponse = "I hear you. If this feels intense, you can open Calm Space from the bottom-left button for quiet breathing and grounding. Or we can take a few slow breaths together right here.";
+      } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
+        if (completedCount === 0) {
+          botResponse = "You haven't checked in with a pacing habit today yet. A gentle place to start is the body calm break on your checklist.";
+        } else if (completedCount < totalCount) {
+          botResponse = `You've completed ${completedCount} of ${totalCount} pacing habits today. Pick the easiest remaining one next so the plan keeps moving without adding pressure.`;
         } else {
-          botResponse = "Let's keep this small and concrete. Name the one thing that feels heaviest right now, and we can turn it into the next manageable step.";
+          botResponse = `You've completed all ${totalCount} pacing habits today. Let the rest of the day be maintenance: lower stimulation, keep transitions gentle, and avoid adding extra obligations.`;
         }
+      } else {
+        botResponse = "Let's keep this small and concrete. Name the one thing that feels heaviest right now, and we can turn it into the next manageable step.";
       }
     }
 

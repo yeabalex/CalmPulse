@@ -16,7 +16,6 @@ interface ChatMessage {
 interface CompanionChatProps {
   completedCount: number;
   totalCount: number;
-  anxietyScore: number;
 }
 
 const INITIAL_DEMO_MESSAGES: ChatMessage[] = [
@@ -34,7 +33,7 @@ function containsGreeting(text: string) {
   return /\b(hello|hi|hey)\b/i.test(text);
 }
 
-export default function CompanionChat({ completedCount, totalCount, anxietyScore }: CompanionChatProps) {
+export default function CompanionChat({ completedCount, totalCount }: CompanionChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -113,10 +112,10 @@ export default function CompanionChat({ completedCount, totalCount, anxietyScore
         if (containsGreeting(userMessage.text)) {
           botResponse = "Hello, I'm here with you. What feels most important to talk through right now?";
         } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
-          botResponse = "I hear you. Try one slow 4-7-8 breathing cycle with me now, and if this feels urgent or unsafe, use local emergency support or the SOS button for immediate grounding.";
+          botResponse = "I hear you. If this feels intense, you can open Calm Space from the bottom-left button for quiet breathing and grounding. Or we can take a few slow breaths together right here.";
         } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
           if (completedCount === 0) {
-            botResponse = `Start with one small reset: the "Somatic Grounding Pause" on your checklist is a good first step. Keep it simple and do just that before deciding on the next task.`;
+            botResponse = "You haven't checked in with a pacing habit today yet. A gentle place to start is the body calm break on your checklist.";
           } else if (completedCount < totalCount) {
             botResponse = `You've completed ${completedCount} of ${totalCount} pacing habits today. Pick the easiest remaining one next so the plan keeps moving without adding pressure.`;
           } else {
@@ -251,7 +250,7 @@ export default function CompanionChat({ completedCount, totalCount, anxietyScore
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Ask your coach about habits, triggers, or pacing..."
-          maxLength={500}
+          maxLength={2000}
           className="flex-1 px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:outline-none"
         />
         <button

@@ -95,7 +95,7 @@ export default function VoiceTextVent({ focusArea, onSubmit, onBack }: VoiceText
           Vent openly. How are you feeling right now?
         </h2>
         <p className="text-xs text-slate-500 max-w-md mx-auto">
-          Write or use your microphone to express what triggered your tension, what symptoms you feel, or what is on your mind. AI will parse this to structure your pacing parameters.
+          Write or use your microphone to share what triggered stress, what you feel in your body, or what is on your mind. CalmPulse will shape this into a gentle plan.
         </p>
       </div>
 
@@ -106,12 +106,12 @@ export default function VoiceTextVent({ focusArea, onSubmit, onBack }: VoiceText
             onChange={(e) => setVentText(e.target.value)}
             placeholder="Type your feelings here, or click the mic to voice vent..."
             className="w-full h-48 p-4 text-sm text-slate-800 bg-transparent border-0 focus:ring-0 focus:outline-none resize-none"
-            maxLength={1000}
+            maxLength={2000}
           />
           
           <div className="flex justify-between items-center px-4 py-2 border-t border-slate-100 bg-slate-50 rounded-b-2xl">
             <span className="text-[10px] text-slate-400 font-semibold">
-              {ventText.length} / 1000 characters
+              {ventText.length} / 2000 characters
             </span>
 
             {speechSupported ? (

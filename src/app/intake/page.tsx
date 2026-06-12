@@ -109,11 +109,11 @@ export default function IntakePage() {
       setTimeout(() => {
         const fallbackReport = {
           anxietyScore: 7.2,
-          subtype: focusArea || "Somatic Tension",
-          symptoms: ["Autonomic Spikes", "Muscle Tension", "Cognitive Exhaustion"],
-          pacingRate: "40% Decelerated",
+          subtype: focusArea || "Body Tension",
+          symptoms: ["Stress Waves", "Muscle Tension", "Mental Fatigue"],
+          pacingRate: "Gentler Pace",
           adjustments: [
-            { name: "Somatic Grounding Pause", type: "Somatic", trigger: "Take a 5m breathing pause every 3 hours" },
+            { name: "Body Calm Pause", type: "Body Calm", trigger: "Take a 5m breathing pause every 3 hours" },
             { name: "Digital Communication Limit", type: "Digital", trigger: "Turn off chat notifications after 9:30 PM" }
           ],
           cohortId: 42,
@@ -153,10 +153,10 @@ export default function IntakePage() {
       const fallbackReport = {
         anxietyScore: 7.2,
         subtype: focusArea,
-        symptoms: ["Autonomic Spikes", "Muscle Tension", "Cognitive Exhaustion"],
-        pacingRate: "40% Decelerated",
+        symptoms: ["Stress Waves", "Muscle Tension", "Mental Fatigue"],
+        pacingRate: "Gentler Pace",
         adjustments: [
-          { name: "Somatic Grounding Pause", type: "Somatic", trigger: "Take a 5m breathing pause every 3 hours" },
+          { name: "Body Calm Pause", type: "Body Calm", trigger: "Take a 5m breathing pause every 3 hours" },
           { name: "Digital Communication Limit", type: "Digital", trigger: "Turn off chat notifications after 9:30 PM" }
         ],
         cohortId: 42,

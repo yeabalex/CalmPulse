@@ -19,13 +19,14 @@ export default function TensionDial({ score, size = "sm" }: TensionDialProps) {
   // Circumference
   const circ = 2 * Math.PI * r;
   const strokeOffset = circ - (circ * score) / 10;
+  const label = score >= 7 ? "High support" : score >= 5 ? "Some support" : "Steady";
 
   return (
     <div className="flex flex-col items-center justify-center text-center">
       <span className={`font-bold text-slate-500 uppercase tracking-wider block ${
         isSmall ? "text-[9px] mb-2" : "text-[10px] mb-3"
       }`}>
-        Tension Index
+        Stress Check
       </span>
       <div className={`relative ${svgSize} flex items-center justify-center`}>
         <svg className="w-full h-full transform -rotate-90">
@@ -50,13 +51,13 @@ export default function TensionDial({ score, size = "sm" }: TensionDialProps) {
           />
         </svg>
         <div className="absolute flex flex-col items-center justify-center">
-          <span className={`font-extrabold text-slate-900 ${
-            isSmall ? "text-sm" : "text-4xl font-black"
+          <span className={`font-extrabold text-slate-900 max-w-[70px] leading-tight ${
+            isSmall ? "text-xs" : "text-lg"
           }`}>
-            {score.toFixed(1)}
+            {label}
           </span>
           {!isSmall && (
-            <span className="text-[10px] font-bold text-slate-400 uppercase">of 10.0</span>
+            <span className="text-[10px] font-bold text-slate-400 uppercase">today</span>
           )}
         </div>
       </div>

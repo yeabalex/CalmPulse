@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { 
-  Heart, ShieldAlert, Award, CheckCircle, Brain, Sparkles, LogOut,
+  Heart, Award, CheckCircle, Brain, Sparkles, LogOut,
   ChevronRight, ArrowRight, Loader2, Play, Volume2, Download, Info
 } from "lucide-react";
 import GlassCard from "@/components/shared/GlassCard";
@@ -25,16 +25,16 @@ const MOCK_HISTORY_LOGS: HistoryEntry[] = [
     ventText: "Felt shoulder tension spike during the team sync due to a sudden release deadline. Struggled to focus afterwards.",
     completedCount: 3,
     totalCount: 3,
-    completedHabits: ["Somatic Grounding Pause", "Digital Communication Limit", "Calm Pacing Walking"]
+    completedHabits: ["Body Calm Pause", "Digital Communication Limit", "Calm Pacing Walking"]
   },
   {
     id: "hist_2",
     date: "Tuesday, June 9",
     anxietyScore: 6.5,
-    ventText: "Somatic breaks helped me stay focused, but got late screen alerts because I stayed up scrolling.",
+    ventText: "Breathing breaks helped me stay focused, but got late screen alerts because I stayed up scrolling.",
     completedCount: 2,
     totalCount: 3,
-    completedHabits: ["Somatic Grounding Pause", "Calm Pacing Walking"]
+    completedHabits: ["Body Calm Pause", "Calm Pacing Walking"]
   },
   {
     id: "hist_3",
@@ -43,12 +43,14 @@ const MOCK_HISTORY_LOGS: HistoryEntry[] = [
     ventText: "Extreme chest tightness after arguing about task prioritization. Felt very reactive and overwhelmed.",
     completedCount: 1,
     totalCount: 3,
-    completedHabits: ["Somatic Grounding Pause"]
+    completedHabits: ["Body Calm Pause"]
   }
 ];
 
+const REFLECTION_DRAFT_KEY = "calmpulse_reflection_draft";
+
 const INITIAL_DEMO_DATA = {
-  name: "Dr. Hackathon Judge",
+  name: "Demo User",
   goal: "Reduce Anxiety & Regulate Sleep",
   goalDuration: 14,
   currentDay: 5,
@@ -65,21 +67,21 @@ const INITIAL_DEMO_DATA = {
   ],
   report: {
     anxietyScore: 6.8,
-    subtype: "Somatic Tension",
-    pacingRate: "45% Decelerated",
+    subtype: "Body Tension",
+    pacingRate: "Gentler Pace",
   },
   redFlags: [
-    "Autonomic Spike during meeting (10:15 AM)",
+    "Stress wave during meeting (10:15 AM)",
     "Late screen activity (11:45 PM)"
   ],
-  insights: "Your somatic markers indicate high tension levels mid-day. The pacing rate has been decelerated by 45% to help restore balance.",
+  insights: "Your notes show higher body tension mid-day. Today's plan adds slower pacing to help you settle.",
   achievements: [
-    { id: "ach_1", title: "Grounding Guru", desc: "Completed 3 somatic breathing pauses this week", unlocked: true },
-    { id: "ach_2", title: "Social Guard", desc: "Maintained digital boundaries for 5 consecutive days", unlocked: true },
-    { id: "ach_3", title: "Perfect Reflection Week", desc: "Logged reflections daily for 7 days", unlocked: false }
+    { id: "ach_1", title: "Took Time to Pause", desc: "Made space for steady breathing this week", unlocked: true },
+    { id: "ach_2", title: "Protected Rest", desc: "Set a helpful digital boundary", unlocked: true },
+    { id: "ach_3", title: "Returned to Reflection", desc: "Came back to check in with yourself", unlocked: false }
   ],
   activities: [
-    { id: "act_1", name: "Somatic Grounding Pause", description: "Take a 5m deep breathing break every 3 hours", type: "Somatic" },
+    { id: "act_1", name: "Body Calm Pause", description: "Take a 5m deep breathing break every 3 hours", type: "Body Calm" },
     { id: "act_2", name: "Digital Communication Limit", description: "Turn off notifications after 9:30 PM", type: "Digital" },
     { id: "act_3", name: "Calm Pacing Walking", description: "10-minute slow pacing stroll post-lunch", type: "Physical" }
   ],
@@ -88,15 +90,15 @@ const INITIAL_DEMO_DATA = {
   pod: {
     id: "pod_42",
     podNumber: 42,
-    focusArea: "Somatic Tension",
+    focusArea: "Body Tension",
     memberCount: 4,
     activeCount: 3,
     isForming: false,
     members: [
-      { id: "m1", displayName: "Sophia (Somatic)", activeToday: true, isCurrentUser: false },
+      { id: "m1", displayName: "Sophia (Body Calm)", activeToday: true, isCurrentUser: false },
       { id: "m2", displayName: "James (Social)", activeToday: true, isCurrentUser: false },
       { id: "m3", displayName: "Maya (Cognitive)", activeToday: false, isCurrentUser: false },
-      { id: "demo-user-123", displayName: "Dr. Hackathon Judge", activeToday: true, isCurrentUser: true }
+      { id: "demo-user-123", displayName: "Demo User", activeToday: true, isCurrentUser: true }
     ]
   }
 };
@@ -202,7 +204,7 @@ export default function DashboardPage() {
           act_3: {
             guide: "Go outside and walk at an intentionally slow pace (about half your normal speed). Focus entirely on the physical sensations of each step and the environmental sounds around you. Do not check your device.",
             duration: "10 minutes",
-            benefit: "Improves somatic grounding and breaks cognitive feedback loops associated with screen fatigue."
+            benefit: "Supports body grounding and helps interrupt screen fatigue loops."
           }
         };
 
@@ -303,6 +305,12 @@ export default function DashboardPage() {
 
   // Fetch AI end-of-day reflection questions
   const startReflection = async () => {
+    if (typeof window !== "undefined") {
+      const savedDraft = localStorage.getItem(REFLECTION_DRAFT_KEY);
+      if (savedDraft && !ventText.trim()) {
+        setVentText(savedDraft);
+      }
+    }
     setReflectionOpen(true);
     setReflectionStep(1);
     setQuestionsLoading(true);
@@ -311,7 +319,7 @@ export default function DashboardPage() {
     if (isDemo) {
       setTimeout(() => {
         setQuestions([
-          "How did your somatic indicators respond during stress triggers today?",
+          "How did your body cues respond during stress triggers today?",
           "What boundary worked best to keep you centered today?",
           "Are there any changes in sleep quality or wind-down rituals you want to note?"
         ]);
@@ -329,13 +337,50 @@ export default function DashboardPage() {
     } catch (e) {
       console.error(e);
       setQuestions([
-        "How did your somatic indicators respond during stress triggers today?",
+        "How did your body cues respond during stress triggers today?",
         "What boundary worked best to keep you centered today?",
         "Are there any changes in sleep quality or wind-down rituals you want to note?"
       ]);
     } finally {
       setQuestionsLoading(false);
     }
+  };
+
+  useEffect(() => {
+    if (!reflectionOpen) return;
+
+    const saveDraft = () => {
+      if (typeof window === "undefined") return;
+      const draft = ventText.trim();
+      if (draft) {
+        localStorage.setItem(REFLECTION_DRAFT_KEY, ventText);
+      }
+    };
+
+    const interval = window.setInterval(saveDraft, 10000);
+    return () => {
+      saveDraft();
+      window.clearInterval(interval);
+    };
+  }, [reflectionOpen, ventText]);
+
+  const closeReflectionModal = () => {
+    const hasDraft = ventText.trim() || Object.values(answers).some((answer) => answer.trim());
+    if (!hasDraft) {
+      setReflectionOpen(false);
+      return;
+    }
+
+    const keepDraft = window.confirm("Keep your draft for later?");
+    if (keepDraft) {
+      localStorage.setItem(REFLECTION_DRAFT_KEY, ventText);
+    } else {
+      localStorage.removeItem(REFLECTION_DRAFT_KEY);
+      setVentText("");
+      setAnswers({});
+      setReflectionStep(1);
+    }
+    setReflectionOpen(false);
   };
 
   // Submit the daily reflection logs
@@ -386,15 +431,16 @@ export default function DashboardPage() {
           report: {
             ...data.report,
             anxietyScore: newScore,
-            pacingRate: newScore > 6 ? "50% Decelerated" : "30% Decelerated"
+            pacingRate: "Gentler Pace"
           },
           completedActivities: [], // reset checklist
           historyLogs: [newHistoryEntry, ...(data.historyLogs || MOCK_HISTORY_LOGS)],
-          insights: `Daily reflection submitted! Based on your rated stress score of ${newScore}/10, your pacing baseline has been recalibrated to ${newScore > 6 ? "50% Decelerated" : "30% Decelerated"}.`
+          insights: "Daily reflection saved. Your next plan has been adjusted toward a gentler pace."
         };
 
         setData(updated);
         localStorage.setItem("calmpulse_demo_data", JSON.stringify(updated));
+        localStorage.removeItem(REFLECTION_DRAFT_KEY);
         
         setReflectionOpen(false);
         setSubmittingReflection(false);
@@ -421,6 +467,7 @@ export default function DashboardPage() {
       if (res.ok) {
         await fetchDashboardData();
         setReflectionOpen(false);
+        localStorage.removeItem(REFLECTION_DRAFT_KEY);
         // Reset inputs
         setVentText("");
         setAnswers({});
@@ -496,7 +543,7 @@ export default function DashboardPage() {
               <div className="p-3 bg-white/70 border border-violet-100/50 rounded-2xl space-y-1">
                 <span className="font-extrabold text-slate-850 block">1. Today&apos;s Habits</span>
                 <span className="text-[10px] text-slate-500 block leading-relaxed">
-                  Check off the pacing habits (or click <strong>Auto-Complete</strong>) to satisfy your somatic targets.
+                  Check off the pacing habits (or click <strong>Auto-Complete</strong>) to try the full demo flow.
                 </span>
               </div>
               <div className="p-3 bg-white/70 border border-violet-100/50 rounded-2xl space-y-1">
@@ -615,15 +662,15 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => setPanicRoomOpen(true)}
-                  className="group min-h-[170px] rounded-2xl border border-rose-100 bg-rose-50/70 hover:bg-rose-50 p-5 text-left transition-all cursor-pointer flex flex-col justify-between"
+                  className="group min-h-[170px] rounded-2xl border border-teal-100 bg-teal-50/70 hover:bg-teal-50 p-5 text-left transition-all cursor-pointer flex flex-col justify-between"
                 >
-                  <span className="w-10 h-10 rounded-2xl bg-white text-rose-600 border border-rose-100 flex items-center justify-center shadow-sm">
-                    <ShieldAlert className="w-5 h-5" />
+                  <span className="w-10 h-10 rounded-2xl bg-white text-teal-700 border border-teal-100 flex items-center justify-center shadow-sm">
+                    <Heart className="w-5 h-5" />
                   </span>
                   <span className="space-y-1.5 block">
-                    <span className="text-base font-black text-slate-900 block">Calm down now</span>
+                    <span className="text-base font-black text-slate-900 block">Open Calm Space</span>
                     <span className="text-xs text-slate-600 leading-relaxed block">
-                      Open a focused grounding space for immediate support.
+                      Open a quiet grounding space for immediate support.
                     </span>
                   </span>
                 </button>
@@ -709,7 +756,6 @@ export default function DashboardPage() {
             <CompanionChat
               completedCount={data.completedActivities?.length || 0}
               totalCount={data.activities?.length || 0}
-              anxietyScore={data.report?.anxietyScore || 6.8}
             />
           </div>
         )}
@@ -730,7 +776,7 @@ export default function DashboardPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-sm font-bold text-slate-900">Today&apos;s Pacing Plan</h3>
-                <p className="text-[10px] text-slate-500">Check off completed somatic pacing habits.</p>
+                <p className="text-[10px] text-slate-500">Check off completed supportive pacing habits.</p>
               </div>
               <div className="flex items-center gap-2">
                 {typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true" && (
@@ -925,7 +971,7 @@ export default function DashboardPage() {
                 <div className="space-y-2">
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-500">Stability projection:</span>
-                    <span className="font-bold text-slate-800">45% Deceleration</span>
+                    <span className="font-bold text-slate-800">Gentler pacing</span>
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-500">Estimated Days Remaining:</span>
@@ -933,10 +979,10 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex justify-between text-[11px]">
                     <span className="text-slate-500">Adherence Factor:</span>
-                    <span className="font-bold text-emerald-600">89% High Match</span>
+                    <span className="font-bold text-emerald-600">Supportive fit</span>
                   </div>
                 </div>
-                <p className="text-[9px] text-slate-400">Based on past 7 days of bio-feedback telemetry and checklists.</p>
+                <p className="text-[9px] text-slate-400">Based on past 7 days of reflections and checklists.</p>
               </GlassCard>
 
               {/* Premium 3: export and coaching reports */}
@@ -947,7 +993,7 @@ export default function DashboardPage() {
                 </div>
                 <h4 className="text-xs font-bold text-slate-900">Export Pacing Baseline PDF</h4>
                 <p className="text-[10px] text-slate-500 leading-relaxed">
-                  Export complete daily logs, trends, sleep metrics, and somatic warning flags to share with your personal therapist or healthcare provider.
+                  Export complete daily logs, trends, sleep metrics, and support notes to share with someone you trust.
                 </p>
                 <button
                   onClick={() => alert("Pacing report CSV exported successfully.")}
@@ -987,7 +1033,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] text-slate-400">Step {reflectionStep} of 2</p>
               </div>
               <button
-                onClick={() => setReflectionOpen(false)}
+                onClick={closeReflectionModal}
                 className="text-slate-400 hover:text-slate-650 text-sm font-bold cursor-pointer"
               >
                 Close
@@ -1007,12 +1053,12 @@ export default function DashboardPage() {
                   onChange={(e) => setVentText(e.target.value)}
                   placeholder="Today felt a bit overwhelming during the meeting..."
                   className="w-full h-36 p-4 text-xs text-slate-800 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-1 focus:ring-slate-900 focus:outline-none resize-none"
-                  maxLength={1000}
+                  maxLength={2000}
                 />
 
                 <div className="flex justify-between pt-4 border-t border-slate-100">
                   <button
-                    onClick={() => setReflectionOpen(false)}
+                    onClick={closeReflectionModal}
                     className="px-6 py-3 border border-slate-250 hover:bg-slate-50 rounded-xl font-bold text-xs cursor-pointer"
                   >
                     Cancel
@@ -1097,21 +1143,21 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Floating Panic Button */}
-      <div className="fixed bottom-6 right-6 z-40">
+      {/* Floating calm space button */}
+      <div className="fixed bottom-6 left-6 z-40">
         <button
           onClick={() => setPanicRoomOpen(true)}
-          className="group relative flex items-center justify-center w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white shadow-[0_0_20px_5px_rgba(225,29,72,0.3)] hover:shadow-[0_0_25px_10px_rgba(225,29,72,0.5)] transition-all duration-300 animate-pulse hover:scale-[1.05] cursor-pointer"
-          title="Panic SOS Button"
+          className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-teal-700 hover:bg-teal-650 text-white shadow-md transition-colors duration-300 cursor-pointer"
+          title="Open Calm Space"
         >
-          <ShieldAlert className="w-7 h-7" />
-          <span className="absolute right-full mr-3 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md border border-slate-800">
-            Panic SOS
+          <Heart className="w-6 h-6" />
+          <span className="absolute left-full ml-3 px-3 py-1.5 rounded-xl bg-slate-900 text-white text-[10px] font-black uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md border border-slate-800">
+            Calm Space
           </span>
         </button>
       </div>
 
-      {/* Panic Room Modal */}
+      {/* Calm Space Modal */}
       <PanicRoomModal 
         isOpen={panicRoomOpen} 
         onClose={() => setPanicRoomOpen(false)} 
