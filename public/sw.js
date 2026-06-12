@@ -1,4 +1,4 @@
-const CACHE_NAME = "calmpulse-cache-v1";
+const CACHE_NAME = "calmpulse-cache-v2";
 const ASSETS_TO_CACHE = [
   "/",
   "/favicon.ico",
@@ -32,33 +32,39 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// Cache-first fetch request handler with network fallback
+// Network-first fetch request handler with cache fallback
 self.addEventListener("fetch", (event) => {
-  // Skip caching API routes or external requests
-  if (event.request.url.includes("/api/") || !event.request.url.startsWith(self.location.origin)) {
+  // Skip caching API routes, login page, or external requests
+  if (
+    event.request.url.includes("/api/") || 
+    event.request.url.includes("/login") ||
+    !event.request.url.startsWith(self.location.origin)
+  ) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== "basic") {
-          return networkResponse;
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === "basic") {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
         return networkResponse;
-      }).catch(() => {
-        // Return index.html if request is page navigation and we are offline
-        if (event.request.mode === "navigate") {
-          return caches.match("/");
-        }
-      });
-    })
+      })
+      .catch(() => {
+        // Fallback to cache on network failure
+        return caches.match(event.request).then((cachedResponse) => {
+          if (cachedResponse) {
+            return cachedResponse;
+          }
+          // Fallback to offline index page
+          if (event.request.mode === "navigate") {
+            return caches.match("/");
+          }
+        });
+      })
   );
 });
