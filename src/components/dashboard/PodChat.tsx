@@ -29,8 +29,73 @@ const INITIAL_DEMO_MESSAGES: ChatMessage[] = [
   }
 ];
 
-function containsGreeting(text: string) {
-  return /\b(hello|hi|hey)\b/i.test(text);
+function renderInlineMarkdown(text: string, isOwn: boolean) {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return (
+        <strong
+          key={`${part}-${index}`}
+          className={isOwn ? "font-extrabold text-white" : "font-extrabold text-slate-950"}
+        >
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
+}
+
+function renderMessageText(text: string, isOwn: boolean) {
+  const lines = text.split(/\r?\n/);
+
+  return (
+    <div className="space-y-1.5">
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+          return <div key={`blank-${index}`} className="h-1" />;
+        }
+
+        const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
+        if (heading) {
+          return (
+            <p
+              key={`heading-${index}`}
+              className={`font-extrabold leading-snug ${
+                isOwn ? "text-white" : "text-slate-950"
+              } ${heading[1].length === 1 ? "text-sm" : "text-xs"}`}
+            >
+              {renderInlineMarkdown(heading[2], isOwn)}
+            </p>
+          );
+        }
+
+        const bullet = trimmed.match(/^[-*]\s+(.+)$/);
+        if (bullet) {
+          return (
+            <div key={`bullet-${index}`} className="flex gap-2">
+              <span className="mt-[0.45em] h-1 w-1 rounded-full bg-current opacity-60 shrink-0" />
+              <p className="min-w-0">{renderInlineMarkdown(bullet[1], isOwn)}</p>
+            </div>
+          );
+        }
+
+        const numbered = trimmed.match(/^\d+[.)]\s+(.+)$/);
+        if (numbered) {
+          return (
+            <div key={`numbered-${index}`} className="flex gap-2">
+              <span className="font-extrabold opacity-70 shrink-0">{trimmed.match(/^\d+/)?.[0]}.</span>
+              <p className="min-w-0">{renderInlineMarkdown(numbered[1], isOwn)}</p>
+            </div>
+          );
+        }
+
+        return <p key={`line-${index}`}>{renderInlineMarkdown(trimmed, isOwn)}</p>;
+      })}
+    </div>
+  );
 }
 
 export default function CompanionChat({ completedCount, totalCount }: CompanionChatProps) {
@@ -38,7 +103,7 @@ export default function CompanionChat({ completedCount, totalCount }: CompanionC
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [draft, setDraft] = useState("");
-  const [error] = useState("");
+  const [error, setError] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const isDemo = typeof window !== "undefined" && localStorage.getItem("calmpulse_demo") === "true";
@@ -76,7 +141,13 @@ export default function CompanionChat({ completedCount, totalCount }: CompanionC
   }, [isDemo]);
 
   useEffect(() => {
-    fetchMessages();
+    let active = true;
+    queueMicrotask(() => {
+      if (active) void fetchMessages();
+    });
+    return () => {
+      active = false;
+    };
   }, [fetchMessages]);
 
   useEffect(() => {
@@ -87,7 +158,8 @@ export default function CompanionChat({ completedCount, totalCount }: CompanionC
     if (!draft.trim() || sending) return;
     setSending(true);
 
-    if (isDemo) {
+    try {
+      setError("");
       const userMessage: ChatMessage = {
         id: `msg_user_${Date.now()}`,
         userId: "user",
@@ -99,84 +171,49 @@ export default function CompanionChat({ completedCount, totalCount }: CompanionC
 
       const currentMessages = [...messages, userMessage];
       setMessages(currentMessages);
-      localStorage.setItem("calmpulse_companion_messages", JSON.stringify(currentMessages));
       setDraft("");
-      setSending(false);
-
-      // Simulate AI Pacing Companion response
-      setTimeout(() => {
-        let botResponse = "";
-
-        const lowerText = userMessage.text.toLowerCase();
-
-        if (containsGreeting(userMessage.text)) {
-          botResponse = "Hello, I'm here with you. What feels most important to talk through right now?";
-        } else if (lowerText.includes("anxious") || lowerText.includes("stressed") || lowerText.includes("overwhelmed") || lowerText.includes("panic")) {
-          botResponse = "I hear you. If this feels intense, you can open Calm Space from the bottom-left button for quiet breathing and grounding. Or we can take a few slow breaths together right here.";
-        } else if (lowerText.includes("habit") || lowerText.includes("task") || lowerText.includes("pace") || lowerText.includes("do today")) {
-          if (completedCount === 0) {
-            botResponse = "You haven't checked in with a pacing habit today yet. A gentle place to start is the body calm break on your checklist.";
-          } else if (completedCount < totalCount) {
-            botResponse = `You've completed ${completedCount} of ${totalCount} pacing habits today. Pick the easiest remaining one next so the plan keeps moving without adding pressure.`;
-          } else {
-            botResponse = `You've completed all ${totalCount} pacing habits today. Let the rest of the day be maintenance: lower stimulation, keep transitions gentle, and avoid adding extra obligations.`;
-          }
-        } else {
-          const answers = [
-            "Let's keep this small and concrete. Name the one thing that feels heaviest right now, and we can turn it into the next manageable step.",
-            "That makes sense. Before solving all of it, try lowering the intensity for the next ten minutes: fewer inputs, slower transitions, and one clear priority.",
-            "You do not have to push through this all at once. Pick the next action that would make your body feel 5 percent safer or less overloaded.",
-            "Let's pause the analysis for a moment. Put both feet down, unclench your jaw, and tell me what changed even slightly."
-          ];
-          botResponse = answers[Math.floor(Math.random() * answers.length)];
-        }
-
-        const botMessage: ChatMessage = {
-          id: `msg_bot_${Date.now()}`,
-          userId: "companion",
-          userName: "AI Companion",
-          text: botResponse,
-          createdAt: new Date().toISOString(),
-          isOwn: false
-        };
-
-        const finalMessages = [...currentMessages, botMessage];
-        setMessages(finalMessages);
-        localStorage.setItem("calmpulse_companion_messages", JSON.stringify(finalMessages));
-      }, 1200);
-      return;
-    }
-
-    // Real account: send message to the backend
-    try {
-      const userMessage: ChatMessage = {
-        id: `msg_user_${Date.now()}`,
-        userId: "user",
-        userName: "You",
-        text: draft.trim(),
-        createdAt: new Date().toISOString(),
-        isOwn: true
-      };
-
-      setMessages((prev) => [...prev, userMessage]);
-      setDraft("");
+      if (isDemo) {
+        localStorage.setItem("calmpulse_companion_messages", JSON.stringify(currentMessages));
+      }
 
       const res = await fetch("/api/pod/messages", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ text: userMessage.text }),
+        body: JSON.stringify({
+          text: userMessage.text,
+          demo: isDemo,
+          demoContext: isDemo
+            ? {
+                completedCount,
+                totalCount,
+                messages: currentMessages.slice(-8).map((message) => ({
+                  text: message.text.slice(0, 500),
+                  isOwn: message.isOwn,
+                })),
+              }
+            : undefined,
+        }),
       });
 
       if (res.ok) {
         const json = await res.json();
         if (json.success && json.message) {
-          setMessages((prev) => [...prev, json.message]);
+          const finalMessages = [...currentMessages, json.message];
+          setMessages(finalMessages);
+          if (isDemo) {
+            localStorage.setItem("calmpulse_companion_messages", JSON.stringify(finalMessages));
+          }
+        } else {
+          setError("The companion could not respond. Try again in a moment.");
         }
+      } else {
+        setError("The companion could not respond. Try again in a moment.");
       }
     } catch (err) {
       console.error("Failed to send companion message:", err);
+      setError("The companion could not respond. Try again in a moment.");
     } finally {
       setSending(false);
     }
@@ -231,7 +268,7 @@ export default function CompanionChat({ completedCount, totalCount }: CompanionC
                     : "bg-slate-50 border border-slate-150 text-slate-800 rounded-bl-sm"
                 }`}
               >
-                {msg.text}
+                {renderMessageText(msg.text, msg.isOwn)}
               </div>
             </div>
           ))
@@ -250,7 +287,7 @@ export default function CompanionChat({ completedCount, totalCount }: CompanionC
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && sendMessage()}
           placeholder="Ask your coach about habits, triggers, or pacing..."
-          maxLength={2000}
+          maxLength={500}
           className="flex-1 px-3.5 py-2.5 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-1 focus:ring-slate-900 focus:outline-none"
         />
         <button
